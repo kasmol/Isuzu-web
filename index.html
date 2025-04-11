@@ -136,14 +136,14 @@
       let user = clientApplication.getAccount();
       document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
       let requestObj1 = {
-        scopes: ["User.Read", 'openid', 'profile','Sites.Read.All','Files.read.All']
+        scopes: ["User.Read", 'openid', "profile","Sites.Read.All","Files.Read.All"]
       };
       reload();
     }
 
     function onSignInClick() {
       let requestObj = {
-        scopes: ["User.Read", 'openid', 'profile','Sites.Read.All','Files.read.All']
+        scopes: ["User.Read", "openid", "profile","Sites.Read.All","Files.Read.All"]
       };
 
       clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
