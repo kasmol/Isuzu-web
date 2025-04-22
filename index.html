@@ -214,7 +214,7 @@
         : (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
       const { token } = await fetchJSON(theURL);
-      const directLine = window.WebChat.createDirectLine({ token });
+      const directLine = window.WebChat.createDirectLine({ token,domain:"https://europe.directline.botframework.com/v3/directline/conversations"});
       const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
         const { type } = action;
         if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
