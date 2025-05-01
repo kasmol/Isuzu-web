@@ -1,142 +1,299 @@
-<!doctype html>
- <html lang="en">
-   <head>
-     <title>Contoso Sample Web Chat</title>
-     <!--
-       This styling is for the Web Chat demonstration purposes.
-       It is recommended that style is moved to a separate file for organization in larger projects.
+<!DOCTYPE html>
+<html>
 
-       Please visit https://github.com/microsoft/BotFramework-WebChat for details about Web Chat.
-     -->
-     <style>
-       html,
-       body {
-         height: 100%;
-       }
+<head>
+  <title>Isuzu Web Chat</title>
+  <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script>
+  <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
+    integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
+    crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    if (typeof Msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/lib/1.2.0/js/msal.js' type='text/javascript' %3E%3C/script%3E"));
+  </script>
+  <script>
+    var clientApplication;
+    (function () {
+      var msalConfig = {
+        auth: {
+          clientId: 'de964867-b3fb-4a2f-8707-af06876a5d2c',
+          authority: 'https://login.microsoftonline.com/8eafaa3d-7204-4e17-b817-17a294850883'
+        },
+        cache: {
+          cacheLocation: 'localStorage',
+          storeAuthStateInCookie: false
+        }
+      };
+      if (!clientApplication) {
+        clientApplication = new Msal.UserAgentApplication(msalConfig);
+      }
+    }());
+  </script>
 
-       body {
-         margin: 0;
-       }
+  <style>
+    html,
+    body {
+      height: 100%;
+    }
 
-       h1 {
-         color: whitesmoke;
-         font-family: Segoe UI;
-         font-size: 16px;
-         line-height: 20px;
-         margin: 0;
-         padding: 0 20px;
-       }
+    body {
+      margin: 0;
+    }
 
-       #banner {
-         align-items: center;
-         background-color: black;
-         display: flex;
-         height: 50px;
-       }
+    h1 {
+      font-size: 16px;
+      font-family: Segoe UI;
+      line-height: 20px;
+      color: whitesmoke;
+      display: table-cell;
+      padding: 13px 0px 0px 20px;
+    }
 
-       #webchat {
-         height: calc(100% - 50px);
-         overflow: hidden;
-         position: fixed;
-         top: 50px;
-         width: 100%;
-       }
-     </style>
-   </head>
-   <body>
-     <div>
-       <div id="banner">
-         <h1>Contoso agent name</h1>
-       </div>
-       <div id="webchat" role="main"></div>
-     </div>
+    #heading {
+      background-color: black;
+      height: 50px;
+    }
 
-     <!--
-       In this sample, the latest version of Web Chat is being used.
-       In production environment, the version number should be pinned and version bump should be done frequently.
+    .main {
+      margin: 18px;
+      border-radius: 4px;
+    }
 
-       Please visit https://github.com/microsoft/BotFramework-WebChat/tree/main/CHANGELOG.md for changelog.
-     -->
-     <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+    div[role="form"] {
+      background-color: black;
+    }
 
-     <script>
-       (async function () {
-         // Specifies style options to customize the Web Chat canvas.
-         // Please visit https://microsoft.github.io/BotFramework-WebChat for customization samples.
-         const styleOptions = {
-           // Hide upload button.
-           hideUploadButton: true
-         };
+    #webchat {
+      position: fixed;
+      height: calc(100% - 50px);
+      width: 100%;
+      top: 50px;
+      overflow: hidden;
+    }
 
-         // Specifies the token endpoint URL.
-         // To get this value, visit Copilot Studio > Settings > Channels > Mobile app page.
-         const tokenEndpointURL = 'https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview';
+    #heading {
+      background-color: black;
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+      height: 50px;
+      width: 100%;
+      overflow: hidden;
+      position: fixed;
+    }
 
-         // Specifies the language the agent and Web Chat should display in:
-         // - (Recommended) To match the page language, set it to document.documentElement.lang
-         // - To use current user language, set it to navigator.language with a fallback language
-         // - To use another language, set it to supported Unicode locale
+    h1 {
+      font-size: 14px;
+      font-family: Segoe UI;
+      font-style: normal;
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 20px;
+      color: #F3F2F1;
+      letter-spacing: 0.005em;
+      display: table-cell;
+      vertical-align: middle;
+      padding: 13px 0px 0px 20px;
+    }
 
-         // Setting page language is highly recommended.
-         // When page language is set, browsers will use native font for the respective language.
+    #chatwindow {
+      height: 80%;
+      width: 100%;
+      overflow: hidden;
+      position: fixed;
+    }
 
-         const locale = document.documentElement.lang || 'en'; // Uses language specified in <html> element and fallback to English (United States).
-         // const locale = navigator.language || 'ja-JP'; // Uses user preferred language and fallback to Japanese.
-         // const locale = 'zh-HAnt'; // Always use Chinese (Traditional).
+    #loginButton {
 
-         const apiVersion = tokenEndpointURL.searchParams.get('api-version');
+      height: 100px;
+      width: 100%;
+      position: fixed;
+    }
+  </style>
 
-         const [directLineURL, token] = await Promise.all([
-           fetch(new URL(`/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`, tokenEndpointURL))
-             .then(response => {
-               if (!response.ok) {
-                 throw new Error('Failed to retrieve regional channel settings.');
-               }
+</head>
 
-               return response.json();
-             })
-             .then(({ channelUrlsById: { directline } }) => directline),
-           fetch(tokenEndpointURL)
-             .then(response => {
-               if (!response.ok) {
-                 throw new Error('Failed to retrieve Direct Line token.');
-               }
+<body onload="onSignInClick()">
+  <div id="chatwindow">
+    <div id="heading">
+      <div><span>SSO Test Bot</span></div>
+    </div>
+    <div style="z-index: 100;position: absolute;margin-top: 50px;width: 100%;">
+      <div>
+        <label id="userName" name="userName" style="width:75%;height:15px;border-color: Transparent;">Not logged
+          in.</label>
+        <button id="login" name="login" onclick="onSignInClick()" style="float: right;background-color: aliceblue;">Log
+          In</button>
+      </div>
+    </div>
+    <div id="webchat">
+    </div>
 
-               return response.json();
-             })
-             .then(({ token }) => token)
-         ]);
+  </div>
+  <script>
+    function onSignin(idToken) {
+      let user = clientApplication.getAccount();
+      document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
+      let requestObj1 = {
+        scopes: ["User.Read", 'openid', "profile","Sites.Read.All","Files.Read.All"]
+      };
+      reload();
+    }
 
-         // The "token" variable is the credentials for accessing the current conversation.
-         // To maintain conversation across page navigation, save and reuse the token.
+    function onSignInClick() {
+      let requestObj = {
+        scopes: ["User.Read", "openid", "profile","Sites.Read.All","Files.Read.All"]
+      };
 
-         // The token could have access to sensitive information about the user.
-         // It must be treated like user password.
+      clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
 
-         const directLine = WebChat.createDirectLine({ domain: new URL('v3/directline', directLineURL), token });
+    }
 
-         // Sends "startConversation" event when the connection is established.
+    function getOAuthCardResourceUri(activity) {
+      if (activity &&
+        activity.attachments &&
+        activity.attachments[0] &&
+        activity.attachments[0].contentType === 'application/vnd.microsoft.card.oauth' &&
+        activity.attachments[0].content.tokenExchangeResource) {
+        // asking for token exchange with AAD
+        return activity.attachments[0].content.tokenExchangeResource.uri;
+      }
+    }
 
-         const subscription = directLine.connectionStatus$.subscribe({
-           next(value) {
-             if (value === 2) {
-               directLine
-                 .postActivity({
-                   localTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                   locale,
-                   name: 'startConversation',
-                   type: 'event'
-                 })
-                 .subscribe();
+    function exchangeTokenAsync(resourceUri) {
+      let user = clientApplication.getAccount();
+      if (user) {
+        let requestObj = {
+          scopes: [resourceUri]
+        };
+        return clientApplication.acquireTokenSilent(requestObj)
+          .then(function (tokenResponse) {
+            return tokenResponse.accessToken;
+          })
+          .catch(function (error) {
+            console.log(error);
+          });
+      }
+      else {
+        return Promise.resolve(null);
+      }
+    }
 
-               // Only send the event once, unsubscribe after the event is sent.
-               subscription.unsubscribe();
-             }
-           }
-         });
+    async function fetchJSON(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          accept: 'application/json'
+        }
+      });
 
-         WebChat.renderWebChat({ directLine, locale, styleOptions }, document.getElementById('webchat'));
-       })();
-     </script>
-   </body>
- </html>
+      if (!res.ok) {
+        throw new Error(`Failed to fetch JSON due to ${res.status}`);
+      }
+
+      return await res.json();
+    } 
+  </script>
+
+  <script>
+
+
+    (async function main() {
+      // if (clientApplication.getAccount() == null) {
+      //   await clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
+      // }
+
+      // Add your BOT ID below 
+      // var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview" // you can find the token URL via the mobile app channel configuration
+      var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/copilotstudio/dataverse-backed/authenticated/bots/cr405_drFredOnWeb/conversations?api-version=2022-03-01-preview"
+      // var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview"
+      var userdetails = clientApplication.getAccount();
+      var userId = clientApplication.account?.accountIdentifier != null ?
+        ("My-customized-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
+        : (Math.random().toString() + Date.now().toString()).substr(0, 64);
+
+      const { token } = await fetchJSON(theURL);
+      const directLine = window.WebChat.createDirectLine({ token});
+      const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
+        const { type } = action;
+        if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
+          dispatch({
+            type: 'WEB_CHAT/SEND_EVENT',
+            payload: {
+              name: 'startConversation',
+              type: 'event',
+              value: { text: userdetails.name }
+            }
+          });
+          return next(action);
+        }
+        if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
+          const activity = action.payload.activity;
+          let resourceUri;
+          if (activity.from && activity.from.role === 'bot' &&
+            (resourceUri = getOAuthCardResourceUri(activity))) {
+            exchangeTokenAsync(resourceUri).then(function (token) {
+              if (token) {
+                directLine.postActivity({
+                  type: 'invoke',
+                  name: 'signin/tokenExchange',
+                  value: {
+                    id: activity.attachments[0].content.tokenExchangeResource.id,
+                    connectionName: activity.attachments[0].content.connectionName,
+                    token
+                  },
+                  "from": {
+                    id: userId,
+                    name: clientApplication.account.name,
+                    role: "user"
+                  }
+                }).subscribe(
+                  id => {
+                    if (id === 'retry') {
+                      // bot was not able to handle the invoke, so display the oauthCard
+                      return next(action);
+                    }
+                    // else: tokenexchange successful and we do not display the oauthCard
+                  },
+                  error => {
+                    // an error occurred to display the oauthCard
+                    return next(action);
+                  }
+                );
+                return;
+              }
+              else
+                return next(action);
+            });
+          }
+          else
+            return next(action);
+        }
+        else
+          return next(action);
+      });
+
+      const styleOptions = {
+
+        // Add styleOptions to customize Web Chat canvas
+        hideUploadButton: true
+      };
+
+
+      window.WebChat.renderWebChat(
+        {
+          directLine: directLine,
+          store,
+          userID: userId,
+          styleOptions
+        },
+        document.getElementById('webchat')
+      );
+    })().catch(err => console.error("An error occurred: " + err));
+  </script>
+</body>
+
+</html>
