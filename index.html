@@ -2,14 +2,33 @@
 <html>
 
 <head>
-  <title>Contoso Sample Web Chat</title>
-  <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+  <title>Isuzu Web Chat</title>
+  <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script>
   <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
     integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
     crossorigin="anonymous"></script>
   <script type="text/javascript">
     if (typeof Msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/lib/1.2.0/js/msal.js' type='text/javascript' %3E%3C/script%3E"));
+  </script>
+  <script>
+    var clientApplication;
+    (function () {
+      var msalConfig = {
+        auth: {
+          clientId: 'de964867-b3fb-4a2f-8707-af06876a5d2c',
+          authority: 'https://login.microsoftonline.com/8eafaa3d-7204-4e17-b817-17a294850883'
+        },
+        cache: {
+          cacheLocation: 'localStorage',
+          storeAuthStateInCookie: false
+        }
+      };
+      if (!clientApplication) {
+        clientApplication = new Msal.UserAgentApplication(msalConfig);
+      }
+    }());
   </script>
 
   <style>
@@ -96,7 +115,7 @@
 
 </head>
 
-<body>
+<body onload="onSignInClick()">
   <div id="chatwindow">
     <div id="heading">
       <div><span>SSO Test Bot</span></div>
@@ -113,22 +132,23 @@
     </div>
 
   </div>
-
   <script>
     function onSignin(idToken) {
       let user = clientApplication.getAccount();
       document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
       let requestObj1 = {
-        scopes: ["user.read", 'openid', 'profile']
+        scopes: ["User.Read", 'openid', "profile","Sites.Read.All","Files.Read.All"]
       };
+      reload();
     }
 
     function onSignInClick() {
       let requestObj = {
-        scopes: ["user.read", 'openid', 'profile']
+        scopes: ["User.Read", "openid", "profile","Sites.Read.All","Files.Read.All"]
       };
 
       clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
+
     }
 
     function getOAuthCardResourceUri(activity) {
@@ -179,34 +199,22 @@
   </script>
 
   <script>
-    var clientApplication;
-    (function () {
-      var msalConfig = {
-        auth: {
-          clientId: 'de964867-b3fb-4a2f-8707-af06876a5d2c',
-          authority: 'https://login.microsoftonline.com/8eafaa3d-7204-4e17-b817-17a294850883'
-        },
-        cache: {
-          cacheLocation: 'localStorage',
-          storeAuthStateInCookie: false
-        }
-      };
-      if (!clientApplication) {
-        clientApplication = new Msal.UserAgentApplication(msalConfig);
-      }
-    }());
+
 
     (async function main() {
+      // if (clientApplication.getAccount() == null) {
+      //   await clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
+      // }
 
       // Add your BOT ID below 
       var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/copilotstudio/dataverse-backed/authenticated/bots/cr405_drFredOnWeb/conversations?api-version=2022-03-01-preview" // you can find the token URL via the mobile app channel configuration
-
+      var userdetails = clientApplication.getAccount();
       var userId = clientApplication.account?.accountIdentifier != null ?
-        ("You-customized-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
+        ("My-customized-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
         : (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
       const { token } = await fetchJSON(theURL);
-      const directLine = window.WebChat.createDirectLine({ token });
+      const directLine = window.WebChat.createDirectLine({ token});
       const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
         const { type } = action;
         if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
@@ -215,7 +223,7 @@
             payload: {
               name: 'startConversation',
               type: 'event',
-              value: { text: "hello" }
+              value: { text: userdetails.name }
             }
           });
           return next(action);
