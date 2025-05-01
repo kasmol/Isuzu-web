@@ -207,7 +207,8 @@
       // }
 
       // Add your BOT ID below 
-      var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/copilotstudio/dataverse-backed/authenticated/bots/cr405_drFredOnWeb/conversations?api-version=2022-03-01-preview" // you can find the token URL via the mobile app channel configuration
+      var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview" // you can find the token URL via the mobile app channel configuration
+      // var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/copilotstudio/dataverse-backed/authenticated/bots/cr405_drFredOnWeb/conversations?api-version=2022-03-01-preview"
       var userdetails = clientApplication.getAccount();
       var userId = clientApplication.account?.accountIdentifier != null ?
         ("My-customized-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
