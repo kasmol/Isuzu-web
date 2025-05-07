@@ -137,14 +137,14 @@
       let user = clientApplication.getAccount();
       document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
       let requestObj1 = {
-        scopes: ["User.Read", 'openid', "profile","Sites.Read.All","Files.Read.All"]
+        scopes: ["User.Read", 'openid', "profile", "Sites.Read.All", "Files.Read.All"]
       };
       reload();
     }
 
     function onSignInClick() {
       let requestObj = {
-        scopes: ["User.Read", "openid", "profile","Sites.Read.All","Files.Read.All"]
+        scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
       };
 
       clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
@@ -209,12 +209,16 @@
       // Add your BOT ID below 
       var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview" // you can find the token URL via the mobile app channel configuration
       var userdetails = clientApplication.getAccount();
-      var userId = clientApplication.account?.accountIdentifier != null ?
-        ("My-customized-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
+      var userId = userdetails?.accountIdentifier != null
+        ? ("My-customized-prefix" + userdetails.accountIdentifier).substr(0, 64)
         : (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
+      // var userId = clientApplication.account?.accountIdentifier != null ?
+      //   ("My-customized-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
+      //   : (Math.random().toString() + Date.now().toString()).substr(0, 64);
+
       const { token } = await fetchJSON(theURL);
-      const directLine = window.WebChat.createDirectLine({ token});
+      const directLine = window.WebChat.createDirectLine({ token });
       const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
         const { type } = action;
         if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
