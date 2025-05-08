@@ -3,6 +3,7 @@
 
 <head>
   <title>Isuzu Web Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
   <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script>
   <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
@@ -40,15 +41,6 @@
       margin: 0;
     }
 
-    h1 {
-      font-size: 16px;
-      font-family: Segoe UI;
-      line-height: 20px;
-      color: whitesmoke;
-      display: table-cell;
-      padding: 13px 0px 0px 20px;
-    }
-
     #heading {
       background-color: black;
       height: 50px;
@@ -65,9 +57,10 @@
 
     #webchat {
       position: fixed;
-      height: calc(100% - 50px);
+      height: calc(100% - 90px);
+      /* Adjusted for better spacing */
       width: 100%;
-      top: 50px;
+      top: 90px;
       overflow: hidden;
     }
 
@@ -81,73 +74,118 @@
       width: 100%;
       overflow: hidden;
       position: fixed;
+      top: 0;
+      z-index: 1000;
     }
 
     h1 {
       font-size: 14px;
       font-family: Segoe UI;
-      font-style: normal;
       font-weight: 600;
-      font-size: 14px;
       line-height: 20px;
       color: #F3F2F1;
       letter-spacing: 0.005em;
       display: table-cell;
       vertical-align: middle;
       padding: 13px 0px 0px 20px;
+      margin: 0;
     }
 
     #chatwindow {
-      height: 80%;
+      height: 100%;
       width: 100%;
-      overflow: hidden;
       position: fixed;
+      top: 0;
     }
 
-    #loginButton {
-
-      height: 100px;
-      width: 100%;
+    #auth-bar {
       position: fixed;
+      top: 50px;
+      width: 100%;
+      background: #f3f2f1;
+      padding: 10px;
+      z-index: 999;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    #login {
+      float: right;
+      background-color: #0078d4;
+      color: white;
+      border: none;
+      padding: 5px 15px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    #login:hover {
+      background-color: #106ebe;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      font-family: Segoe UI;
+      color: #605e5c;
     }
   </style>
 
 </head>
 
-<body onload="onSignInClick()">
+<body onload="initApp()">
   <div id="chatwindow">
     <div id="heading">
-      <div><span>SSO Test Bot</span></div>
+      <h1>SSO Test Bot</h1>
     </div>
-    <div style="z-index: 100;position: absolute;margin-top: 50px;width: 100%;">
-      <div>
-        <label id="userName" name="userName" style="width:75%;height:15px;border-color: Transparent;">Not logged
-          in.</label>
-        <button id="login" name="login" onclick="onSignInClick()" style="float: right;background-color: aliceblue;">Log
-          In</button>
-      </div>
+    <div id="auth-bar">
+      <label id="userName">Not logged in.</label>
+      <button id="login" onclick="onSignInClick()">Log In</button>
     </div>
     <div id="webchat">
+      <div class="loading">Loading chat interface...</div>
     </div>
-
   </div>
+
   <script>
-    function onSignin(idToken) {
-      let user = clientApplication.getAccount();
-      document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
-      let requestObj1 = {
-        scopes: ["User.Read", 'openid', "profile", "Sites.Read.All", "Files.Read.All"]
-      };
-      reload();
+    // Global variables
+    let directLine;
+    let userId;
+
+    function updateUI(user) {
+      const userNameElement = document.getElementById("userName");
+      const loginButton = document.getElementById("login");
+
+      if (user) {
+        userNameElement.innerHTML = "Logged in as: " + user.name;
+        loginButton.style.display = "none";
+      } else {
+        userNameElement.innerHTML = "Not logged in.";
+        loginButton.style.display = "block";
+      }
+    }
+
+    function onSignin() {
+      const user = clientApplication.getAccount();
+      updateUI(user);
+      initializeWebChat();
     }
 
     function onSignInClick() {
-      let requestObj = {
+      const requestObj = {
         scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
       };
 
-      clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
+      document.getElementById("webchat").innerHTML = '<div class="loading">Authenticating...</div>';
 
+      clientApplication.loginPopup(requestObj)
+        .then(onSignin)
+        .catch(error => {
+          console.error("Login failed:", error);
+          document.getElementById("userName").innerHTML = "Login failed. Please try again.";
+          document.getElementById("webchat").innerHTML = '<div class="loading">Please log in to continue.</div>';
+        });
     }
 
     function getOAuthCardResourceUri(activity) {
@@ -156,28 +194,22 @@
         activity.attachments[0] &&
         activity.attachments[0].contentType === 'application/vnd.microsoft.card.oauth' &&
         activity.attachments[0].content.tokenExchangeResource) {
-        // asking for token exchange with AAD
         return activity.attachments[0].content.tokenExchangeResource.uri;
       }
     }
 
     function exchangeTokenAsync(resourceUri) {
-      let user = clientApplication.getAccount();
+      const user = clientApplication.getAccount();
       if (user) {
-        let requestObj = {
-          scopes: [resourceUri]
-        };
+        const requestObj = { scopes: [resourceUri] };
         return clientApplication.acquireTokenSilent(requestObj)
-          .then(function (tokenResponse) {
-            return tokenResponse.accessToken;
-          })
-          .catch(function (error) {
-            console.log(error);
+          .then(tokenResponse => tokenResponse.accessToken)
+          .catch(error => {
+            console.error("Token acquisition failed:", error);
+            return null;
           });
       }
-      else {
-        return Promise.resolve(null);
-      }
+      return Promise.resolve(null);
     }
 
     async function fetchJSON(url, options = {}) {
@@ -190,111 +222,115 @@
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to fetch JSON due to ${res.status}`);
+        throw new Error(`Failed to fetch JSON: ${res.status}`);
       }
 
       return await res.json();
-    } 
-  </script>
+    }
 
-  <script>
-
-
-    (async function main() {
-      // if (clientApplication.getAccount() == null) {
-      //   await clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
-      // }
-
-      // Add your BOT ID below 
-      var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview" // you can find the token URL via the mobile app channel configuration
-      var userdetails = clientApplication.getAccount();
-      var userId = clientApplication.account?.accountIdentifier != null ?
-        ("My-customized-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
-        : (Math.random().toString() + Date.now().toString()).substr(0, 64);
-
-      const { token } = await fetchJSON(theURL);
-      // const directLine = window.WebChat.createDirectLine({ token });
-      const directLine = window.WebChat.createDirectLine({
-        token,
-        domain: 'https://europe.directline.botframework.com/v3/directline' // <-- Add this line
-      });
-
-      const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
-        const { type } = action;
-        if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
-          dispatch({
-            type: 'WEB_CHAT/SEND_EVENT',
-            payload: {
-              name: 'startConversation',
-              type: 'event',
-              value: { text: userdetails.name }
-            }
-          });
-          return next(action);
+    async function initializeWebChat() {
+      try {
+        const user = clientApplication.getAccount();
+        if (!user) {
+          document.getElementById("webchat").innerHTML = '<div class="loading">Please log in to continue.</div>';
+          return;
         }
-        if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
-          const activity = action.payload.activity;
-          let resourceUri;
-          if (activity.from && activity.from.role === 'bot' &&
-            (resourceUri = getOAuthCardResourceUri(activity))) {
-            exchangeTokenAsync(resourceUri).then(function (token) {
-              if (token) {
-                directLine.postActivity({
-                  type: 'invoke',
-                  name: 'signin/tokenExchange',
-                  value: {
-                    id: activity.attachments[0].content.tokenExchangeResource.id,
-                    connectionName: activity.attachments[0].content.connectionName,
-                    token
-                  },
-                  "from": {
-                    id: userId,
-                    name: clientApplication.account.name,
-                    role: "user"
-                  }
-                }).subscribe(
-                  id => {
-                    if (id === 'retry') {
-                      // bot was not able to handle the invoke, so display the oauthCard
-                      return next(action);
-                    }
-                    // else: tokenexchange successful and we do not display the oauthCard
-                  },
-                  error => {
-                    // an error occurred to display the oauthCard
-                    return next(action);
-                  }
-                );
-                return;
+
+        document.getElementById("webchat").innerHTML = '<div class="loading">Connecting to bot...</div>';
+
+        userId = user.accountIdentifier ?
+          ("usr-" + user.accountIdentifier).substr(0, 64) :
+          (Math.random().toString() + Date.now().toString()).substr(0, 64);
+
+        const theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview";
+
+        const { token } = await fetchJSON(theURL);
+
+        // Initialize DirectLine with European endpoint
+        directLine = window.WebChat.createDirectLine({
+          token,
+          domain: 'https://europe.directline.botframework.com/v3/directline'
+        });
+
+        const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
+          if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
+            dispatch({
+              type: 'WEB_CHAT/SEND_EVENT',
+              payload: {
+                name: 'startConversation',
+                type: 'event',
+                value: { text: user.name }
               }
-              else
-                return next(action);
             });
           }
-          else
-            return next(action);
-        }
-        else
+
+          if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
+            const activity = action.payload.activity;
+            const resourceUri = getOAuthCardResourceUri(activity);
+
+            if (activity.from?.role === 'bot' && resourceUri) {
+              exchangeTokenAsync(resourceUri).then(token => {
+                if (token) {
+                  directLine.postActivity({
+                    type: 'invoke',
+                    name: 'signin/tokenExchange',
+                    value: {
+                      id: activity.attachments[0].content.tokenExchangeResource.id,
+                      connectionName: activity.attachments[0].content.connectionName,
+                      token
+                    },
+                    from: {
+                      id: userId,
+                      name: user.name,
+                      role: "user"
+                    }
+                  }).subscribe(
+                    id => id === 'retry' ? next(action) : null,
+                    error => next(action)
+                  );
+                  return;
+                }
+                return next(action);
+              });
+              return;
+            }
+          }
           return next(action);
-      });
+        });
 
-      const styleOptions = {
+        const styleOptions = {
+          hideUploadButton: true,
+          bubbleBackground: 'rgba(0, 120, 212, 0.1)',
+          bubbleFromUserBackground: 'rgba(0, 120, 212, 0.3)'
+        };
 
-        // Add styleOptions to customize Web Chat canvas
-        hideUploadButton: true
-      };
+        window.WebChat.renderWebChat(
+          {
+            directLine,
+            store,
+            userID: userId,
+            styleOptions
+          },
+          document.getElementById('webchat')
+        );
 
+      } catch (error) {
+        console.error("Bot initialization failed:", error);
+        document.getElementById("webchat").innerHTML = `
+          <div class="loading">
+            Failed to connect to bot. Please refresh the page or try again later.
+          </div>
+        `;
+      }
+    }
 
-      window.WebChat.renderWebChat(
-        {
-          directLine: directLine,
-          store,
-          userID: userId,
-          styleOptions
-        },
-        document.getElementById('webchat')
-      );
-    })().catch(err => console.error("An error occurred: " + err));
+    function initApp() {
+      const user = clientApplication.getAccount();
+      updateUI(user);
+      if (user) {
+        initializeWebChat();
+      }
+    }
   </script>
 </body>
 
