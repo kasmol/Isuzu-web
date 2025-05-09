@@ -127,7 +127,8 @@
     </script>
 </head>
 
-<body onload="onSignInClick()">
+<body>
+
     <!-- Logo -->
     <img src="getsitelogob.png" alt="Isuzu Logo" class="logo">
 
@@ -233,21 +234,23 @@
         document.addEventListener("DOMContentLoaded", function () {
             if (sessionStorage.getItem('justLoggedIn')) {
                 sessionStorage.removeItem('justLoggedIn');
-                // Let the bot load now (user just logged in)
+                main(); // ✅ Call bot now after reload
             } else {
                 const account = clientApplication.getAccount();
                 if (account) {
                     document.getElementById("userName").innerHTML = "Currently logged in as " + account.name;
+                    main(); // ✅ Already logged in, start bot
                 } else {
-                    // Not signed in, trigger login
-                    onSignInClick();
+                    onSignInClick(); // ⛔ Only log in if not already signed in
                 }
             }
         });
 
+
         (async function main() {
             var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview"
             var userdetails = clientApplication.getAccount();
+            if (!userdetails) return;
             var userId = userdetails?.accountIdentifier != null
                 ? ("My-customized-prefix" + userdetails.accountIdentifier).substr(0, 64)
                 : (Math.random().toString() + Date.now().toString()).substr(0, 64);
