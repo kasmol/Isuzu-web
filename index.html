@@ -127,7 +127,7 @@
     </script>
 </head>
 
-<body onload="onSignInClick()">
+<body>
     <!-- Logo -->
     <img src="getsitelogob.png" alt="Isuzu Logo" class="logo">
 
@@ -163,15 +163,19 @@
                     console.error("Error replaying the video:", error);
                 });
             });
+
+            // Check if user is already logged in
+            const user = clientApplication.getAccount();
+            if (user) {
+                document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
+                initializeBot();
+            }
         });
 
         function onSignin(idToken) {
             let user = clientApplication.getAccount();
             document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
-            let requestObj1 = {
-                scopes: ["User.Read", 'openid', "profile", "Sites.Read.All", "Files.Read.All"]
-            };
-            reload();
+            initializeBot();
         }
 
         function onSignInClick() {
@@ -179,7 +183,11 @@
                 scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
             };
 
-            clientApplication.loginPopup(requestObj).then(onSignin).catch(function (error) { console.log(error) });
+            clientApplication.loginPopup(requestObj)
+                .then(onSignin)
+                .catch(function (error) {
+                    console.log(error);
+                });
         }
 
         function getOAuthCardResourceUri(activity) {
@@ -225,96 +233,102 @@
             }
 
             return await res.json();
-        } 
-    </script>
+        }
 
-    <script>
-        (async function main() {
-            var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview"
-            var userdetails = clientApplication.getAccount();
-            var userId = userdetails?.accountIdentifier != null
-                ? ("My-customized-prefix" + userdetails.accountIdentifier).substr(0, 64)
-                : (Math.random().toString() + Date.now().toString()).substr(0, 64);
+        async function initializeBot() {
+            try {
+                // Clear previous bot instance if any
+                const webchatElement = document.getElementById('webchat');
+                webchatElement.innerHTML = '';
 
-            const { token } = await fetchJSON(theURL);
-            const directLine = window.WebChat.createDirectLine({
-                token,
-                domain: 'https://europe.directline.botframework.com/v3/directline'
-            });
+                var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview";
+                var userdetails = clientApplication.getAccount();
+                var userId = userdetails?.accountIdentifier != null
+                    ? ("My-customized-prefix" + userdetails.accountIdentifier).substr(0, 64)
+                    : (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
-            const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
-                const { type } = action;
-                if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
-                    dispatch({
-                        type: 'WEB_CHAT/SEND_EVENT',
-                        payload: {
-                            name: 'startConversation',
-                            type: 'event',
-                            value: { text: userdetails.name }
-                        }
-                    });
-                    return next(action);
-                }
-                if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
-                    const activity = action.payload.activity;
-                    let resourceUri;
-                    if (activity.from && activity.from.role === 'bot' &&
-                        (resourceUri = getOAuthCardResourceUri(activity))) {
-                        exchangeTokenAsync(resourceUri).then(function (token) {
-                            if (token) {
-                                directLine.postActivity({
-                                    type: 'invoke',
-                                    name: 'signin/tokenExchange',
-                                    value: {
-                                        id: activity.attachments[0].content.tokenExchangeResource.id,
-                                        connectionName: activity.attachments[0].content.connectionName,
-                                        token
-                                    },
-                                    "from": {
-                                        id: userId,
-                                        name: clientApplication.account.name,
-                                        role: "user"
-                                    }
-                                }).subscribe(
-                                    id => {
-                                        if (id === 'retry') {
+                const { token } = await fetchJSON(theURL);
+                const directLine = window.WebChat.createDirectLine({
+                    token,
+                    domain: 'https://europe.directline.botframework.com/v3/directline'
+                });
+
+                const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
+                    const { type } = action;
+                    if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
+                        dispatch({
+                            type: 'WEB_CHAT/SEND_EVENT',
+                            payload: {
+                                name: 'startConversation',
+                                type: 'event',
+                                value: { text: userdetails.name }
+                            }
+                        });
+                        return next(action);
+                    }
+                    if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
+                        const activity = action.payload.activity;
+                        let resourceUri;
+                        if (activity.from && activity.from.role === 'bot' &&
+                            (resourceUri = getOAuthCardResourceUri(activity))) {
+                            exchangeTokenAsync(resourceUri).then(function (token) {
+                                if (token) {
+                                    directLine.postActivity({
+                                        type: 'invoke',
+                                        name: 'signin/tokenExchange',
+                                        value: {
+                                            id: activity.attachments[0].content.tokenExchangeResource.id,
+                                            connectionName: activity.attachments[0].content.connectionName,
+                                            token
+                                        },
+                                        "from": {
+                                            id: userId,
+                                            name: clientApplication.account.name,
+                                            role: "user"
+                                        }
+                                    }).subscribe(
+                                        id => {
+                                            if (id === 'retry') {
+                                                return next(action);
+                                            }
+                                        },
+                                        error => {
                                             return next(action);
                                         }
-                                    },
-                                    error => {
-                                        return next(action);
-                                    }
-                                );
-                                return;
-                            }
-                            else
-                                return next(action);
-                        });
+                                    );
+                                    return;
+                                }
+                                else
+                                    return next(action);
+                            });
+                        }
+                        else
+                            return next(action);
                     }
                     else
                         return next(action);
-                }
-                else
-                    return next(action);
-            });
+                });
 
-            const styleOptions = {
-                hideUploadButton: true,
-                bubbleBackground: 'rgba(0, 120, 215, 0.1)',
-                bubbleFromUserBackground: 'rgba(0, 120, 215, 0.1)',
-                backgroundColor: 'transparent'
-            };
+                const styleOptions = {
+                    hideUploadButton: true,
+                    bubbleBackground: 'rgba(0, 120, 215, 0.1)',
+                    bubbleFromUserBackground: 'rgba(0, 120, 215, 0.1)',
+                    backgroundColor: 'transparent'
+                };
 
-            window.WebChat.renderWebChat(
-                {
-                    directLine: directLine,
-                    store,
-                    userID: userId,
-                    styleOptions
-                },
-                document.getElementById('webchat')
-            );
-        })().catch(err => console.error("An error occurred: " + err));
+                window.WebChat.renderWebChat(
+                    {
+                        directLine: directLine,
+                        store,
+                        userID: userId,
+                        styleOptions
+                    },
+                    document.getElementById('webchat')
+                );
+            } catch (err) {
+                console.error("An error occurred while initializing the bot:", err);
+            }
+        }
     </script>
 </body>
 
