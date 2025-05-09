@@ -127,7 +127,7 @@
     </script>
 </head>
 
-<body>
+<body onload="checkLoginState()">
     <!-- Logo -->
     <img src="getsitelogob.png" alt="Isuzu Logo" class="logo">
 
@@ -163,14 +163,18 @@
                     console.error("Error replaying the video:", error);
                 });
             });
+        });
 
-            // Check if user is already logged in
+        function checkLoginState() {
             const user = clientApplication.getAccount();
             if (user) {
                 document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
                 initializeBot();
+            } else {
+                // Only auto-trigger login if there's no user
+                onSignInClick();
             }
-        });
+        }
 
         function onSignin(idToken) {
             let user = clientApplication.getAccount();
@@ -187,6 +191,8 @@
                 .then(onSignin)
                 .catch(function (error) {
                     console.log(error);
+                    // If login fails, we can still initialize the bot in anonymous mode
+                    initializeBot();
                 });
         }
 
@@ -261,7 +267,7 @@
                             payload: {
                                 name: 'startConversation',
                                 type: 'event',
-                                value: { text: userdetails.name }
+                                value: { text: userdetails?.name || "Guest" }
                             }
                         });
                         return next(action);
@@ -283,7 +289,7 @@
                                         },
                                         "from": {
                                             id: userId,
-                                            name: clientApplication.account.name,
+                                            name: clientApplication.account?.name || "Guest",
                                             role: "user"
                                         }
                                     }).subscribe(
