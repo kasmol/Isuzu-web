@@ -102,17 +102,6 @@
             cursor: pointer;
         }
 
-        #logout {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            margin-left: 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            display: none;
-        }
-
         #userName {
             color: white;
         }
@@ -138,7 +127,7 @@
     </script>
 </head>
 
-<body onload="checkLoginState()">
+<body>
     <!-- Logo -->
     <img src="getsitelogob.png" alt="Isuzu Logo" class="logo">
 
@@ -152,7 +141,6 @@
     <div class="login-controls">
         <label id="userName" name="userName">Not logged in</label>
         <button id="login" name="login" onclick="onSignInClick()">Log In</button>
-        <button id="logout" name="logout" onclick="onSignOutClick()">Log Out</button>
     </div>
 
     <!-- Chat Container -->
@@ -175,38 +163,19 @@
                     console.error("Error replaying the video:", error);
                 });
             });
-        });
 
-        function checkLoginState() {
+            // Check if user is already logged in
             const user = clientApplication.getAccount();
             if (user) {
-                updateLoginUI(user);
+                document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
+                document.getElementById("login").innerHTML = "";
                 initializeBot();
             }
-        }
-
-        function updateLoginUI(user) {
-            if (user) {
-                document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
-                document.getElementById("login").style.display = "none";
-                document.getElementById("logout").style.display = "inline-block";
-            } else {
-                document.getElementById("userName").innerHTML = "Not logged in";
-                document.getElementById("login").style.display = "inline-block";
-                document.getElementById("logout").style.display = "none";
-            }
-        }
+        });
 
         function onSignin(idToken) {
             let user = clientApplication.getAccount();
-            updateLoginUI(user);
-            initializeBot();
-        }
-
-        function onSignOutClick() {
-            clientApplication.logout();
-            updateLoginUI(null);
-            // Reinitialize bot in anonymous mode
+            document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
             initializeBot();
         }
 
@@ -219,8 +188,6 @@
                 .then(onSignin)
                 .catch(function (error) {
                     console.log(error);
-                    // Initialize bot in anonymous mode if login fails
-                    initializeBot();
                 });
         }
 
@@ -295,7 +262,7 @@
                             payload: {
                                 name: 'startConversation',
                                 type: 'event',
-                                value: { text: userdetails?.name || "Guest" }
+                                value: { text: userdetails.name }
                             }
                         });
                         return next(action);
@@ -317,7 +284,7 @@
                                         },
                                         "from": {
                                             id: userId,
-                                            name: clientApplication.account?.name || "Guest",
+                                            name: clientApplication.account.name,
                                             role: "user"
                                         }
                                     }).subscribe(
