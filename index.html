@@ -168,6 +168,7 @@
             const user = clientApplication.getAccount();
             if (user) {
                 document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
+                document.getElementById("login").innerHTML = "";
                 initializeBot();
             }
         });
