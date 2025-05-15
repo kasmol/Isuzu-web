@@ -1,208 +1,261 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <title>Isuzu Web Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CPS Web Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Web Chat SDK -->
-  <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+    <!-- WebChat and MSAL -->
+    <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+    <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
 
-  <!-- MSAL v2 (msal-browser) -->
-  <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
+    <!-- Optional Blob SDK -->
+    <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
+        integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
+        crossorigin="anonymous"></script>
 
-  <!-- Optional for Blob usage -->
-  <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js" crossorigin="anonymous"></script>
+    <!-- Styles -->
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
 
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-    }
+        .background-video {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1;
+        }
 
-    .background-video {
-      position: fixed;
-      right: 0;
-      bottom: 0;
-      min-width: 100%;
-      min-height: 100%;
-      z-index: -1;
-    }
+        .logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            height: 50px;
+        }
 
-    .logo {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 1;
-      height: 50px;
-    }
+        .iframe-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90vw;
+            height: 400px;
+            max-height: 600px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            z-index: 2;
+        }
 
-    .iframe-container {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90vw;
-      height: 400px;
-      max-height: 600px;
-      background-color: rgba(255, 255, 255, 0.9);
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      overflow: hidden;
-      z-index: 2;
-    }
+        #heading {
+            background-color: rgba(0, 0, 0, 0.8);
+            height: 50px;
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+            color: white;
+        }
 
-    #heading {
-      background-color: rgba(0, 0, 0, 0.8);
-      height: 50px;
-      display: flex;
-      align-items: center;
-      padding-left: 20px;
-      color: white;
-    }
+        #webchat {
+            height: calc(100% - 50px);
+            width: 100%;
+        }
 
-    #webchat {
-      height: calc(100% - 50px);
-      width: 100%;
-    }
+        .login-controls {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            z-index: 3;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+        }
 
-    .login-controls {
-      position: absolute;
-      top: 60px;
-      left: 20px;
-      z-index: 3;
-      background-color: rgba(0, 0, 0, 0.7);
-      padding: 10px;
-      border-radius: 5px;
-      color: white;
-    }
+        #login {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin-left: 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
 
-    #login {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      margin-left: 10px;
-      border-radius: 3px;
-      cursor: pointer;
-    }
+        #userName {
+            color: white;
+        }
+    </style>
 
-    #userName {
-      color: white;
-    }
-  </style>
 </head>
+
 <body>
-  <img src="getsitelogob.png" alt="Isuzu Logo" class="logo">
+    <img src="getsitelogob.png" alt="Isuzu Logo" class="logo">
+    <video id="backgroundVideo" autoplay muted loop class="background-video">
+        <source src="Isuzu MU-X Showcase  Isuzu UTE Australia - Isuzu UTE Australia (720p, h264).mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
 
-  <video id="backgroundVideo" autoplay muted loop class="background-video">
-    <source src="Isuzu MU-X Showcase.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
+    <div class="login-controls">
+        <label id="userName" name="userName">Not logged in</label>
+        <button id="login" name="login" onclick="signIn()">Log In</button>
+    </div>
 
-  <div class="login-controls">
-    <label id="userName">Not logged in</label>
-    <button id="login" onclick="onSignInClick()">Log In</button>
-  </div>
+    <div class="iframe-container">
+        <div id="heading">
+            <span>Ask CPS</span>
+        </div>
+        <div id="webchat"></div>
+    </div>
 
-  <div class="iframe-container">
-    <div id="heading"><span>Ask Dr.Fred</span></div>
-    <div id="webchat"></div>
-  </div>
-
-  <script>
-    const msalConfig = {
-      auth: {
-        clientId: 'de964867-b3fb-4a2f-8707-af06876a5d2c',
-        authority: 'https://login.microsoftonline.com/8eafaa3d-7204-4e17-b817-17a294850883',
-        redirectUri: window.location.href
-      },
-      cache: {
-        cacheLocation: 'localStorage',
-        storeAuthStateInCookie: true // Helps with Safari/iOS issues
-      }
-    };
-
-    const msalInstance = new msal.PublicClientApplication(msalConfig);
-    const loginRequest = {
-      scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
-    };
-
-    async function onSignInClick() {
-      try {
-        const loginResponse = await msalInstance.loginPopup(loginRequest);
-        onSignin(loginResponse);
-      } catch (err) {
-        console.error("Login failed", err);
-      }
-    }
-
-    function onSignin(response) {
-      const account = msalInstance.getAllAccounts()[0];
-      if (account) {
-        document.getElementById("userName").innerText = `Currently logged in as ${account.username}`;
-        initializeBot(account);
-      }
-    }
-
-    async function fetchJSON(url, options = {}) {
-      const res = await fetch(url, {
-        ...options,
-        headers: {
-          ...options.headers,
-          accept: 'application/json'
-        }
-      });
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      return await res.json();
-    }
-
-    async function initializeBot(user) {
-      const theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview";
-
-      const { token } = await fetchJSON(theURL);
-      const userId = user.localAccountId || (Math.random().toString() + Date.now().toString()).substr(0, 64);
-
-      const directLine = window.WebChat.createDirectLine({
-        token,
-        domain: 'https://europe.directline.botframework.com/v3/directline'
-      });
-
-      const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
-        if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
-          dispatch({
-            type: 'WEB_CHAT/SEND_EVENT',
-            payload: {
-              name: 'startConversation',
-              type: 'event',
-              value: { text: user.username }
+    <script>
+        const msalConfig = {
+            auth: {
+                clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
+                authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850'
+            },
+            cache: {
+                cacheLocation: 'localStorage',
+                storeAuthStateInCookie: true
             }
-          });
-        }
-        return next(action);
-      });
+        };
 
-      window.WebChat.renderWebChat({
-        directLine,
-        store,
-        userID: userId,
-        styleOptions: {
-          hideUploadButton: true,
-          bubbleBackground: 'rgba(0, 120, 215, 0.1)',
-          bubbleFromUserBackground: 'rgba(0, 120, 215, 0.1)',
-          backgroundColor: 'transparent'
-        }
-      }, document.getElementById('webchat'));
-    }
+        const loginRequest = {
+            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
+        };
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      const accounts = msalInstance.getAllAccounts();
-      if (accounts.length > 0) {
-        onSignin();
-      }
-    });
-  </script>
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+        async function signIn() {
+            try {
+                const loginResponse = await msalInstance.loginPopup(loginRequest);
+                updateUI();
+                initializeBot();
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function updateUI() {
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+                document.getElementById("userName").innerHTML = "Currently logged in as " + accounts[0].username;
+                document.getElementById("login").style.display = "none";
+            }
+        }
+
+        function getOAuthCardResourceUri(activity) {
+            if (activity?.attachments?.[0]?.contentType === 'application/vnd.microsoft.card.oauth') {
+                return activity.attachments[0].content.tokenExchangeResource?.uri;
+            }
+        }
+
+        async function exchangeTokenAsync(resourceUri) {
+            const account = msalInstance.getAllAccounts()[0];
+            try {
+                const response = await msalInstance.acquireTokenSilent({ scopes: [resourceUri], account });
+                return response.accessToken;
+            } catch (err) {
+                console.log(err);
+                return null;
+            }
+        }
+
+        async function fetchJSON(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: { ...options.headers, accept: 'application/json' }
+            });
+            if (!res.ok) throw new Error(`Failed to fetch JSON: ${res.status}`);
+            return res.json();
+        }
+
+        async function initializeBot() {
+            try {
+                const webchatElement = document.getElementById('webchat');
+                webchatElement.innerHTML = '';
+
+                const theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
+                const account = msalInstance.getAllAccounts()[0];
+                const userId = account?.homeAccountId || ("user" + Math.random().toString().substr(2, 10));
+                const { token } = await fetchJSON(theURL);
+
+                const directLine = window.WebChat.createDirectLine({
+                    token,
+                    domain: 'https://europe.directline.botframework.com/v3/directline'
+                });
+
+                const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
+                    if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
+                        dispatch({
+                            type: 'WEB_CHAT/SEND_EVENT',
+                            payload: {
+                                name: 'startConversation',
+                                type: 'event',
+                                value: { text: account.username }
+                            }
+                        });
+                    }
+
+                    if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
+                        const activity = action.payload.activity;
+                        const resourceUri = getOAuthCardResourceUri(activity);
+                        if (activity.from.role === 'bot' && resourceUri) {
+                            exchangeTokenAsync(resourceUri).then(token => {
+                                if (token) {
+                                    directLine.postActivity({
+                                        type: 'invoke',
+                                        name: 'signin/tokenExchange',
+                                        value: {
+                                            id: activity.attachments[0].content.tokenExchangeResource.id,
+                                            connectionName: activity.attachments[0].content.connectionName,
+                                            token
+                                        },
+                                        from: {
+                                            id: userId,
+                                            name: account.username,
+                                            role: "user"
+                                        }
+                                    }).subscribe();
+                                }
+                            });
+                        }
+                    }
+
+                    return next(action);
+                });
+
+                const styleOptions = {
+                    hideUploadButton: true,
+                    bubbleBackground: 'rgba(0, 120, 215, 0.1)',
+                    bubbleFromUserBackground: 'rgba(0, 120, 215, 0.1)',
+                    backgroundColor: 'transparent'
+                };
+
+                window.WebChat.renderWebChat({ directLine, store, userID: userId, styleOptions }, webchatElement);
+            } catch (err) {
+                console.error("Bot init failed:", err);
+            }
+        }
+
+        // Auto init if already signed in
+        document.addEventListener("DOMContentLoaded", () => {
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+                updateUI();
+                initializeBot();
+            }
+        });
+    </script>
 </body>
+
 </html>
