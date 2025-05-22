@@ -2,15 +2,12 @@
 <html>
 
 <head>
-    <title>CPS Web Chat</title>
+    <title>CPS Chat</title>
     <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script>
-    <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
-        integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
-        crossorigin="anonymous"></script>
+    <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
     <script type="text/javascript">
-        if (typeof Msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/lib/1.2.0/js/msal.js' type='text/javascript' %3E%3C/script%3E"));
+        if (typeof msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/browser/2.32.0/js/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
     </script>
 
     <!-- Favicon -->
@@ -108,22 +105,26 @@
     </style>
 
     <script>
-        var clientApplication;
-        (function () {
-            var msalConfig = {
-                auth: {
-                    clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
-                    authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850'
-                },
-                cache: {
-                    cacheLocation: 'localStorage',
-                    storeAuthStateInCookie: false
-                }
-            };
-            if (!clientApplication) {
-                clientApplication = new Msal.UserAgentApplication(msalConfig);
+        // MSAL configuration
+        const msalConfig = {
+            auth: {
+                clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
+                authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850',
+                redirectUri: window.location.origin // Important for MSAL 2.x
+            },
+            cache: {
+                cacheLocation: 'localStorage',
+                storeAuthStateInCookie: true // Recommended for better compatibility
             }
-        }());
+        };
+
+        // Create MSAL instance
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+        // Login request configuration
+        const loginRequest = {
+            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
+        };
     </script>
 </head>
 
@@ -165,30 +166,49 @@
             });
 
             // Check if user is already logged in
-            const user = clientApplication.getAccount();
-            if (user) {
-                document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
-                document.getElementById("login").innerHTML = "";
-                initializeBot();
-            }
+            msalInstance.handleRedirectPromise()
+                .then(() => {
+                    const accounts = msalInstance.getAllAccounts();
+                    if (accounts.length > 0) {
+                        const user = accounts[0];
+                        document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
+                        document.getElementById("login").innerHTML = "Log Out";
+                        document.getElementById("login").onclick = onSignOutClick;
+                        initializeBot();
+                    }
+                })
+                .catch(error => {
+                    console.error("Error handling redirect promise:", error);
+                });
         });
 
-        function onSignin(idToken) {
-            let user = clientApplication.getAccount();
-            document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
-            initializeBot();
+        async function onSignInClick() {
+            try {
+                const loginResponse = await msalInstance.loginPopup(loginRequest);
+                const accounts = msalInstance.getAllAccounts();
+                if (accounts.length > 0) {
+                    const user = accounts[0];
+                    document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
+                    document.getElementById("login").innerHTML = "Log Out";
+                    document.getElementById("login").onclick = onSignOutClick;
+                    initializeBot();
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+            }
         }
 
-        function onSignInClick() {
-            let requestObj = {
-                scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
-            };
-
-            clientApplication.loginPopup(requestObj)
-                .then(onSignin)
-                .catch(function (error) {
-                    console.log(error);
-                });
+        async function onSignOutClick() {
+            try {
+                await msalInstance.logoutPopup();
+                document.getElementById("userName").innerHTML = "Not logged in";
+                document.getElementById("login").innerHTML = "Log In";
+                document.getElementById("login").onclick = onSignInClick;
+                // Clear the chat window
+                document.getElementById('webchat').innerHTML = '';
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
         }
 
         function getOAuthCardResourceUri(activity) {
@@ -201,22 +221,23 @@
             }
         }
 
-        function exchangeTokenAsync(resourceUri) {
-            let user = clientApplication.getAccount();
-            if (user) {
-                let requestObj = {
-                    scopes: [resourceUri]
-                };
-                return clientApplication.acquireTokenSilent(requestObj)
-                    .then(function (tokenResponse) {
-                        return tokenResponse.accessToken;
-                    })
-                    .catch(function (error) {
-                        console.log(error);
-                    });
+        async function exchangeTokenAsync(resourceUri) {
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length === 0) {
+                return null;
             }
-            else {
-                return Promise.resolve(null);
+
+            const tokenRequest = {
+                scopes: [resourceUri],
+                account: accounts[0]
+            };
+
+            try {
+                const tokenResponse = await msalInstance.acquireTokenSilent(tokenRequest);
+                return tokenResponse.accessToken;
+            } catch (error) {
+                console.error("Token acquisition failed:", error);
+                return null;
             }
         }
 
@@ -243,9 +264,11 @@
                 webchatElement.innerHTML = '';
 
                 var theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
-                var userdetails = clientApplication.getAccount();
-                var userId = userdetails?.accountIdentifier != null
-                    ? ("My-customized-prefix" + userdetails.accountIdentifier).substr(0, 64)
+                const accounts = msalInstance.getAllAccounts();
+                const user = accounts[0];
+                
+                var userId = user?.localAccountId != null
+                    ? ("My-customized-prefix" + user.localAccountId).substr(0, 64)
                     : (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
                 const { token } = await fetchJSON(theURL);
@@ -262,7 +285,7 @@
                             payload: {
                                 name: 'startConversation',
                                 type: 'event',
-                                value: { text: userdetails.name }
+                                value: { text: user.name }
                             }
                         });
                         return next(action);
@@ -284,7 +307,7 @@
                                         },
                                         "from": {
                                             id: userId,
-                                            name: clientApplication.account.name,
+                                            name: user.name,
                                             role: "user"
                                         }
                                     }).subscribe(
@@ -328,9 +351,10 @@
                 );
             } catch (err) {
                 console.error("An error occurred while initializing the bot:", err);
+                document.getElementById('webchat').innerHTML = 
+                    '<div style="padding: 20px; color: red;">Failed to initialize chat. Please refresh the page.</div>';
             }
         }
     </script>
 </body>
-
 </html>
