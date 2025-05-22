@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>CPS Web Chat</title>
+    <title>CPS Web</title>
     <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script>
@@ -243,7 +243,8 @@
                 webchatElement.innerHTML = '';
 
                 // var theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/copilotstudio/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
-                var theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
+                // var theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
+                var theURL = "https://defaulta6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
                 var userdetails = clientApplication.getAccount();
                 var userId = userdetails?.accountIdentifier != null
                     ? ("My-customized-prefix" + userdetails.accountIdentifier).substr(0, 64)
