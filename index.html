@@ -113,8 +113,8 @@
                 redirectUri: window.location.origin // Important for MSAL 2.x
             },
             cache: {
-                cacheLocation: 'localStorage',
-                storeAuthStateInCookie: true // Recommended for better compatibility
+                cacheLocation: 'sessionStorage',
+                storeAuthStateInCookie: false // Recommended for better compatibility
             }
         };
 
