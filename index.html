@@ -13,7 +13,8 @@
 
     <!-- Styling -->
     <style>
-        html, body {
+        html,
+        body {
             height: 100%;
             margin: 0;
             font-family: Arial, sans-serif;
@@ -109,8 +110,8 @@
                 redirectUri: window.location.href
             },
             cache: {
-                cacheLocation: "localStorage", // Use sessionStorage for incognito
-                storeAuthStateInCookie: true   // Recommended for iOS/Safari
+                cacheLocation: "sessionStorage", // Use sessionStorage for incognito
+                storeAuthStateInCookie: false   // Recommended for iOS/Safari
             }
         };
 
@@ -128,6 +129,7 @@
 
         async function signIn() {
             try {
+                // Try popup login first
                 const loginResponse = await msalInstance.loginPopup({
                     scopes: ["User.Read", "openid", "profile"]
                 });
@@ -136,11 +138,36 @@
                 document.getElementById("userName").innerText = "Logged in as " + account.username;
 
                 await initializeBot();
-            } catch (error) {
-                console.error("Login error:", error);
-                alert("Login failed. Make sure cookies are enabled.");
+            } catch (popupError) {
+                console.warn("Popup login failed, trying redirect login...", popupError);
+
+                try {
+                    // Use redirect login as fallback
+                    msalInstance.loginRedirect({
+                        scopes: ["User.Read", "openid", "profile"]
+                    });
+                } catch (redirectError) {
+                    console.error("Redirect login also failed", redirectError);
+                    alert("Login failed. Make sure cookies are enabled or try a normal browser tab.");
+                }
             }
         }
+
+        // async function signIn() {
+        //     try {
+        //         const loginResponse = await msalInstance.loginPopup({
+        //             scopes: ["User.Read", "openid", "profile"]
+        //         });
+
+        //         account = loginResponse.account;
+        //         document.getElementById("userName").innerText = "Logged in as " + account.username;
+
+        //         await initializeBot();
+        //     } catch (error) {
+        //         console.error("Login error:", error);
+        //         alert("Login failed. Make sure cookies are enabled.");
+        //     }
+        // }
 
         async function fetchToken() {
             const tokenURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
