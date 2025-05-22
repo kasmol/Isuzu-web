@@ -5,12 +5,13 @@
     <title>CPS Web Chat</title>
     <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script>
+    <!-- <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script> -->
+     <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
     <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
         integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
         crossorigin="anonymous"></script>
     <script type="text/javascript">
-        if (typeof Msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/lib/1.2.0/js/msal.js' type='text/javascript' %3E%3C/script%3E"));
+        if (typeof Msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/browser/2.32.0/js/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
     </script>
 
     <!-- Favicon -->
@@ -116,7 +117,7 @@
                     authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850'
                 },
                 cache: {
-                    cacheLocation: 'localStorage',
+                    cacheLocation: 'sessionStorage',
                     storeAuthStateInCookie: false
                 }
             };
