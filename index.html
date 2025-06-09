@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Isuzu Web Chat</title>
+    <title>CPS Web Chat</title>
     <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script type="text/javascript" src="https://alcdn.msauth.net/lib/1.2.0/js/msal.js"></script>
@@ -112,8 +112,8 @@
         (function () {
             var msalConfig = {
                 auth: {
-                    clientId: 'de964867-b3fb-4a2f-8707-af06876a5d2c',
-                    authority: 'https://login.microsoftonline.com/8eafaa3d-7204-4e17-b817-17a294850883'
+                    clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
+                    authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850'
                 },
                 cache: {
                     cacheLocation: 'localStorage',
@@ -129,7 +129,7 @@
 
 <body>
     <!-- Logo -->
-    <img src="getsitelogob.png" alt="Isuzu Logo" class="logo">
+    <!-- <img src="getsitelogob.png" alt="Isuzu Logo" class="logo"> -->
 
     <!-- Video Background -->
     <video id="backgroundVideo" autoplay muted loop class="background-video">
@@ -139,14 +139,14 @@
 
     <!-- Login Controls -->
     <div class="login-controls">
-        <label id="userName" name="userName">Not logged in.</label>
+        <label id="userName" name="userName">Not logged in</label>
         <button id="login" name="login" onclick="onSignInClick()">Log In</button>
     </div>
 
     <!-- Chat Container -->
     <div class="iframe-container">
         <div id="heading">
-            <span>Ask Dr.Fred</span>
+            <span>Ask CPS</span>
         </div>
         <div id="webchat"></div>
     </div>
@@ -168,6 +168,7 @@
             const user = clientApplication.getAccount();
             if (user) {
                 document.getElementById("userName").innerHTML = "Currently logged in as " + user.name;
+                document.getElementById("login").innerHTML = "";
                 initializeBot();
             }
         });
@@ -241,7 +242,7 @@
                 const webchatElement = document.getElementById('webchat');
                 webchatElement.innerHTML = '';
 
-                var theURL = "https://default8eafaa3d72044e17b81717a2948508.83.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr405_drFredOnWeb/directline/token?api-version=2022-03-01-preview";
+                var theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
                 var userdetails = clientApplication.getAccount();
                 var userId = userdetails?.accountIdentifier != null
                     ? ("My-customized-prefix" + userdetails.accountIdentifier).substr(0, 64)
