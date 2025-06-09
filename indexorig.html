@@ -2,237 +2,96 @@
 <html>
 
 <head>
-    <title>CPS Web Chat</title>
-    <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Using MSAL.js v2.x -->
+    <title>Contoso Sample Web Chat</title>
+    <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
     <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
     <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
         integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
         crossorigin="anonymous"></script>
 
-    <!-- Favicon -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
-
     <style>
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-
-        /* Video Background Styling */
-        .background-video {
-            position: fixed;
-            right: 0;
-            bottom: 0;
-            min-width: 100%;
-            min-height: 100%;
-            z-index: -1;
-        }
-
-        /* Logo Styling */
-        .logo {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1;
-            height: 50px;
-        }
-
-        /* Chat Container Styling - Centered and smaller */
-        .iframe-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 90vw;
-            height: 400px;
-            max-height: 600px;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-            z-index: 2;
-        }
-
-        /* Header styling */
-        #heading {
-            background-color: rgba(0, 0, 0, 0.8);
-            height: 50px;
-            display: flex;
-            align-items: center;
-            padding-left: 20px;
-            color: white;
-        }
-
-        /* Web chat styling */
-        #webchat {
-            height: calc(100% - 50px);
-            width: 100%;
-        }
-
-        /* Login controls styling */
-        .login-controls {
-            position: absolute;
-            top: 60px;
-            left: 20px;
-            z-index: 3;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 5px;
-            color: white;
-        }
-
-        #login {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            margin-left: 10px;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        #userName {
-            color: white;
-        }
+        /* your styles unchanged */
     </style>
+
 </head>
 
 <body>
-    <!-- Video Background -->
-    <video id="backgroundVideo" autoplay muted loop class="background-video">
-        <source src="Isuzu MU-X Showcase  Isuzu UTE Australia - Isuzu UTE Australia (720p, h264).mp4" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
-
-    <!-- Login Controls -->
-    <div class="login-controls">
-        <label id="userName" name="userName">Not logged in</label>
-        <button id="login" name="login">Log In</button>
-    </div>
-
-    <!-- Chat Container -->
-    <div class="iframe-container">
+    <div id="chatwindow">
         <div id="heading">
-            <span>Ask CPS</span>
+            <div><span>SSO Test Bot</span></div>
         </div>
-        <div id="webchat"></div>
+        <div style="z-index: 100;position: absolute;margin-top: 50px;width: 100%;">
+            <div>
+                <label id="userName" name="userName" style="width:75%;height:15px;border-color: Transparent;">Not logged
+                    in.</label>
+                <button id="login" name="login" onclick="onSignInClick()"
+                    style="float: right;background-color: aliceblue;">Log In</button>
+            </div>
+        </div>
+        <div id="webchat">
+        </div>
+
     </div>
 
     <script>
-        // MSAL 2.x Configuration
         const msalConfig = {
             auth: {
-                clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
-                authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850',
-                redirectUri: window.location.origin,
-                navigateToLoginRequestUrl: false
+                clientId: 'ff20bd23-60f5-42c0-af50-0e941194dce8',
+                authority: 'https://login.microsoftonline.com/1661e837-0a95-4bc6-a655-865365c2419b'
             },
             cache: {
-                cacheLocation: "sessionStorage", // Better for private browsing
-                storeAuthStateInCookie: true // Required for Safari/IE
-            },
-            system: {
-                loggerOptions: {
-                    loggerCallback: (level, message, containsPii) => {
-                        if (containsPii) return;
-                        console.log(message);
-                    },
-                    logLevel: msal.LogLevel.Verbose
-                },
-                windowHashTimeout: 9000,
-                iframeHashTimeout: 9000,
-                loadFrameTimeout: 9000
+                cacheLocation: "localStorage",
+                storeAuthStateInCookie: false
             }
         };
 
-        // Initialize MSAL PublicClientApplication
+        // Create PublicClientApplication instance
         const msalInstance = new msal.PublicClientApplication(msalConfig);
 
-        // Account and login state management
-        let accountId = null;
+        // Scopes for login and token
+        const loginRequest = {
+            scopes: ["user.read", "openid", "profile"]
+        };
 
-        // Check if we're returning from a redirect
-        msalInstance.handleRedirectPromise()
-            .then(handleResponse)
-            .catch(error => {
-                console.error("Error handling redirect response:", error);
-            });
-
-        // DOM Ready
-        document.addEventListener("DOMContentLoaded", function () {
-            const video = document.getElementById("backgroundVideo");
-            video.addEventListener("ended", function () {
-                video.currentTime = 0;
-                video.play().catch(console.error);
-            });
-
-            // Check for active account
-            const accounts = msalInstance.getAllAccounts();
-            if (accounts.length > 0) {
-                accountId = accounts[0].homeAccountId;
-                updateUI(accounts[0]);
-                initializeBot();
-            }
-
-            // Set up login button
-            document.getElementById("login").addEventListener("click", function() {
-                const accounts = msalInstance.getAllAccounts();
-                if (accounts.length > 0) {
-                    // Logout if already logged in
-                    msalInstance.logoutRedirect({
-                        postLogoutRedirectUri: window.location.origin
-                    });
-                } else {
-                    // Login
-                    if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                        // Use redirect flow for mobile devices
-                        msalInstance.loginRedirect({
-                            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"],
-                            prompt: "select_account"
-                        });
-                    } else {
-                        // Use popup for desktop
-                        msalInstance.loginPopup({
-                            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"],
-                            prompt: "select_account"
-                        }).then(handleResponse)
-                          .catch(console.error);
-                    }
-                }
-            });
-        });
-
-        function handleResponse(response) {
-            if (response !== null) {
-                accountId = response.account.homeAccountId;
-                updateUI(response.account);
-                initializeBot();
-            } else {
-                const accounts = msalInstance.getAllAccounts();
-                if (accounts.length > 0) {
-                    accountId = accounts[0].homeAccountId;
-                    updateUI(accounts[0]);
-                    initializeBot();
-                }
+        async function onSignInClick() {
+            try {
+                const loginResponse = await msalInstance.loginPopup(loginRequest);
+                handleResponse(loginResponse);
+            } catch (error) {
+                console.error(error);
             }
         }
 
-        function updateUI(account) {
-            if (account) {
-                document.getElementById("userName").innerHTML = `Currently logged in as ${account.name}`;
-                document.getElementById("login").innerHTML = "Log Out";
+        async function handleResponse(response) {
+            let account;
+            if (response !== null) {
+                account = response.account;
+                msalInstance.setActiveAccount(account);
             } else {
-                document.getElementById("userName").innerHTML = "Not logged in";
-                document.getElementById("login").innerHTML = "Log In";
+                account = msalInstance.getActiveAccount();
+            }
+
+            if (account) {
+                document.getElementById("userName").textContent = `Currently logged in as ${account.name}`;
+                // You can trigger additional actions here after login
+            }
+        }
+
+        async function exchangeTokenAsync(resourceUri) {
+            const account = msalInstance.getActiveAccount();
+            if (account) {
+                try {
+                    const tokenResponse = await msalInstance.acquireTokenSilent({
+                        scopes: [resourceUri],
+                        account: account
+                    });
+                    return tokenResponse.accessToken;
+                } catch (error) {
+                    console.log(error);
+                    return null;
+                }
+            } else {
+                return null;
             }
         }
 
@@ -242,26 +101,9 @@
                 activity.attachments[0] &&
                 activity.attachments[0].contentType === 'application/vnd.microsoft.card.oauth' &&
                 activity.attachments[0].content.tokenExchangeResource) {
+                // asking for token exchange with AAD
                 return activity.attachments[0].content.tokenExchangeResource.uri;
             }
-        }
-
-        function exchangeTokenAsync(resourceUri) {
-            const account = msalInstance.getAccountByHomeId(accountId);
-            if (account) {
-                return msalInstance.acquireTokenSilent({
-                    scopes: [resourceUri],
-                    account: account
-                })
-                .then(function (tokenResponse) {
-                    return tokenResponse.accessToken;
-                })
-                .catch(function (error) {
-                    console.log("Token acquisition failed:", error);
-                    return null;
-                });
-            }
-            return Promise.resolve(null);
         }
 
         async function fetchJSON(url, options = {}) {
@@ -280,100 +122,90 @@
             return await res.json();
         }
 
-        async function initializeBot() {
-            try {
-                // Clear previous bot instance if any
-                const webchatElement = document.getElementById('webchat');
-                webchatElement.innerHTML = '';
+        (async function main() {
+            // Attempt to handle existing logged in user
+            handleResponse(null);
 
-                var theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
-                var account = msalInstance.getAccountByHomeId(accountId);
-                var userId = account?.homeAccountId != null
-                    ? ("My-customized-prefix" + account.homeAccountId).substr(0, 64)
-                    : (Math.random().toString() + Date.now().toString()).substr(0, 64);
+            var theURL = "https://b838e0443024ea32b2f47862b85e99.03.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr74e_blogSiteCopilot/directline/token?api-version=2022-03-01-preview"; 
 
-                const { token } = await fetchJSON(theURL);
-                const directLine = window.WebChat.createDirectLine({
-                    token,
-                    domain: 'https://europe.directline.botframework.com/v3/directline'
-                });
+            // Use active account if available
+            const account = msalInstance.getActiveAccount();
+            var userId = account
+                ? ("You-customized-prefix" + account.homeAccountId).substr(0, 64)
+                : (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
-                const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
-                    const { type } = action;
-                    if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
-                        dispatch({
-                            type: 'WEB_CHAT/SEND_EVENT',
-                            payload: {
-                                name: 'startConversation',
-                                type: 'event',
-                                value: { text: account.name }
-                            }
-                        });
-                        return next(action);
-                    }
-                    if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
-                        const activity = action.payload.activity;
-                        let resourceUri;
-                        if (activity.from && activity.from.role === 'bot' &&
-                            (resourceUri = getOAuthCardResourceUri(activity))) {
-                            exchangeTokenAsync(resourceUri).then(function (token) {
-                                if (token) {
-                                    directLine.postActivity({
-                                        type: 'invoke',
-                                        name: 'signin/tokenExchange',
-                                        value: {
-                                            id: activity.attachments[0].content.tokenExchangeResource.id,
-                                            connectionName: activity.attachments[0].content.connectionName,
-                                            token
-                                        },
-                                        "from": {
-                                            id: userId,
-                                            name: account.name,
-                                            role: "user"
-                                        }
-                                    }).subscribe(
-                                        id => {
-                                            if (id === 'retry') {
-                                                return next(action);
-                                            }
-                                        },
-                                        error => {
+            const { token } = await fetchJSON(theURL);
+            const directLine = window.WebChat.createDirectLine({ token });
+            const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
+                const { type } = action;
+                if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
+                    dispatch({
+                        type: 'WEB_CHAT/SEND_EVENT',
+                        payload: {
+                            name: 'startConversation',
+                            type: 'event',
+                            value: { text: "hello" }
+                        }
+                    });
+                    return next(action);
+                }
+                if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
+                    const activity = action.payload.activity;
+                    let resourceUri;
+                    if (activity.from && activity.from.role === 'bot' &&
+                        (resourceUri = getOAuthCardResourceUri(activity))) {
+                        exchangeTokenAsync(resourceUri).then(function (token) {
+                            if (token) {
+                                directLine.postActivity({
+                                    type: 'invoke',
+                                    name: 'signin/tokenExchange',
+                                    value: {
+                                        id: activity.attachments[0].content.tokenExchangeResource.id,
+                                        connectionName: activity.attachments[0].content.connectionName,
+                                        token
+                                    },
+                                    "from": {
+                                        id: userId,
+                                        name: account ? account.name : "User",
+                                        role: "user"
+                                    }
+                                }).subscribe(
+                                    id => {
+                                        if (id === 'retry') {
                                             return next(action);
                                         }
-                                    );
-                                    return;
-                                }
-                                else
-                                    return next(action);
-                            });
-                        }
-                        else
-                            return next(action);
+                                    },
+                                    error => {
+                                        return next(action);
+                                    }
+                                );
+                                return;
+                            }
+                            else
+                                return next(action);
+                        });
                     }
                     else
                         return next(action);
-                });
+                }
+                else
+                    return next(action);
+            });
 
-                const styleOptions = {
-                    hideUploadButton: true,
-                    bubbleBackground: 'rgba(0, 120, 215, 0.1)',
-                    bubbleFromUserBackground: 'rgba(0, 120, 215, 0.1)',
-                    backgroundColor: 'transparent'
-                };
+            const styleOptions = {
+                hideUploadButton: true
+            };
 
-                window.WebChat.renderWebChat(
-                    {
-                        directLine: directLine,
-                        store,
-                        userID: userId,
-                        styleOptions
-                    },
-                    document.getElementById('webchat')
-                );
-            } catch (err) {
-                console.error("An error occurred while initializing the bot:", err);
-            }
-        }
+            window.WebChat.renderWebChat(
+                {
+                    directLine: directLine,
+                    store,
+                    userID: userId,
+                    styleOptions
+                },
+                document.getElementById('webchat')
+            );
+        })().catch(err => console.error("An error occurred: " + err));
     </script>
 </body>
 
