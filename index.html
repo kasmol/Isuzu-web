@@ -14,6 +14,11 @@
     <!-- <script type="text/javascript">
         if (typeof msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/browser/2.32.0/js/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
     </script> -->
+    <script>
+        if (typeof msal === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.32.0/dist/msal-browser.min.js"><\/script>');
+        }
+    </script>
 
     <style>
         html,
