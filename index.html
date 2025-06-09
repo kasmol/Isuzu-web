@@ -1,24 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8" />
     <title>CPS Web Chat</title>
-    <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Correct MSAL.js v2.x browser version -->
-    <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
-    <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
-        integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
-        crossorigin="anonymous"></script>
-    <script type="text/javascript">
-        if (typeof msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/browser/2.32.0/js/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
-    </script>
 
-    <!-- Favicon
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest"> -->
+    <!-- Bot Framework Web Chat -->
+    <script crossorigin src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+
+    <!-- MSAL.js v2 -->
+    <script src="https://alcdn.msauth.net/lib/2.32.0/js/msal-browser.min.js"></script>
 
     <style>
         html,
@@ -40,15 +32,6 @@
             z-index: -1;
         }
 
-        /* Logo Styling */
-        .logo {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1;
-            height: 50px;
-        }
-
         /* Chat Container Styling - Centered and smaller */
         .iframe-container {
             position: fixed;
@@ -63,6 +46,8 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
             overflow: hidden;
             z-index: 2;
+            display: flex;
+            flex-direction: column;
         }
 
         /* Header styling */
@@ -73,12 +58,14 @@
             align-items: center;
             padding-left: 20px;
             color: white;
+            flex-shrink: 0;
         }
 
         /* Web chat styling */
         #webchat {
-            height: calc(100% - 50px);
+            flex-grow: 1;
             width: 100%;
+            height: 100%;
         }
 
         /* Login controls styling */
@@ -91,179 +78,145 @@
             padding: 10px;
             border-radius: 5px;
             color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         #login {
-            background-color: #4CAF50;
+            background-color: #4caf50;
             color: white;
             border: none;
             padding: 5px 10px;
-            margin-left: 10px;
             border-radius: 3px;
             cursor: pointer;
         }
-
-        #userName {
-            color: white;
-        }
     </style>
-
-    <script>
-        // MSAL 2.x Configuration
-        const msalConfig = {
-            auth: {
-                clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
-                authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850',
-                redirectUri: window.location.origin // Required for v2.x
-            },
-            cache: {
-                cacheLocation: "sessionStorage", // Works better in private mode
-                storeAuthStateInCookie: true // Required for iOS/Safari
-            }
-        };
-
-        // Initialize MSAL
-        const msalInstance = new msal.PublicClientApplication(msalConfig);
-    </script>
 </head>
 
 <body>
-    <!-- [Your existing body HTML remains exactly the same] -->
+    <!-- Video Background -->
+    <video id="backgroundVideo" autoplay muted loop class="background-video" playsinline>
+        <source src="Isuzu MU-X Showcase  Isuzu UTE Australia - Isuzu UTE Australia (720p, h264).mp4"
+            type="video/mp4" />
+        Your browser does not support the video tag.
+    </video>
+
+    <!-- Login Controls -->
+    <div class="login-controls">
+        <span id="userName">Not logged in</span>
+        <button id="login">Log In</button>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="iframe-container">
+        <div id="heading">
+            <span>Ask CPS</span>
+        </div>
+        <div id="webchat"></div>
+    </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const video = document.getElementById("backgroundVideo");
-            video.addEventListener("ended", function () {
-                video.currentTime = 0;
-                video.play().catch(console.error);
-            });
+        // Confirm msal loaded
+        console.log('msal library:', msal);
+        if (!msal) {
+            alert('MSAL library did not load correctly!');
+        }
 
-            // Handle redirect response
-            msalInstance.handleRedirectPromise()
-                .then(handleAuthResponse)
-                .catch(console.error);
+        // MSAL config for v2
+        const msalConfig = {
+            auth: {
+                clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
+                authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850'
+            },
+            cache: {
+                cacheLocation: 'localStorage',
+                storeAuthStateInCookie: false
+            }
+        };
 
-            // Check for active account
-            const accounts = msalInstance.getAllAccounts();
-            if (accounts.length > 0) {
-                updateUI(accounts[0]);
-                initializeBot();
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+        const loginButton = document.getElementById('login');
+        const userNameLabel = document.getElementById('userName');
+        const webchatDiv = document.getElementById('webchat');
+
+        loginButton.addEventListener('click', async () => {
+            try {
+                const loginResponse = await msalInstance.loginPopup({
+                    scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
+                });
+
+                // Get user info
+                const account = msalInstance.getAllAccounts()[0];
+                if (account) {
+                    userNameLabel.textContent = `Currently logged in as ${account.name}`;
+                    loginButton.style.display = 'none';
+                    initializeBot(account);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Login failed. See console for details.');
             }
         });
 
-        function handleAuthResponse(response) {
-            if (response !== null) {
-                updateUI(response.account);
-                initializeBot();
-            } else {
-                const accounts = msalInstance.getAllAccounts();
-                if (accounts.length > 0) {
-                    updateUI(accounts[0]);
-                    initializeBot();
+        // On page load, check if user is already logged in
+        window.onload = () => {
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+                const account = accounts[0];
+                userNameLabel.textContent = `Currently logged in as ${account.name}`;
+                loginButton.style.display = 'none';
+                initializeBot(account);
+            }
+        };
+
+        async function fetchJSON(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    accept: 'application/json'
                 }
-            }
-        }
-
-        function updateUI(account) {
-            const loginBtn = document.getElementById("login");
-            if (account) {
-                document.getElementById("userName").innerHTML = "Currently logged in as " + account.name;
-                loginBtn.innerHTML = "Log Out";
-                loginBtn.onclick = onSignOutClick;
-            } else {
-                document.getElementById("userName").innerHTML = "Not logged in";
-                loginBtn.innerHTML = "Log In";
-                loginBtn.onclick = onSignInClick;
-            }
-        }
-
-        async function onSignInClick() {
-            try {
-                const loginRequest = {
-                    scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
-                };
-
-                // Use redirect for mobile devices
-                if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                    await msalInstance.loginRedirect(loginRequest);
-                } else {
-                    const response = await msalInstance.loginPopup(loginRequest);
-                    handleAuthResponse(response);
-                }
-            } catch (error) {
-                console.error("Login failed:", error);
-            }
-        }
-
-        function onSignOutClick() {
-            msalInstance.logoutRedirect({
-                postLogoutRedirectUri: window.location.origin
             });
+
+            if (!res.ok) {
+                throw new Error(`Failed to fetch JSON due to ${res.status}`);
+            }
+
+            return await res.json();
         }
 
-        // [Rest of your functions (getOAuthCardResourceUri, exchangeTokenAsync, fetchJSON) remain the same]
-
-        async function initializeBot() {
+        async function initializeBot(account) {
             try {
-                const webchatElement = document.getElementById('webchat');
-                webchatElement.innerHTML = '';
+                webchatDiv.innerHTML = ''; // clear previous chat
 
-                const theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
-                const accounts = msalInstance.getAllAccounts();
-                const account = accounts.length > 0 ? accounts[0] : null;
+                // Your token endpoint URL to get DirectLine token
+                const directLineTokenUrl = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
 
-                const userId = account?.homeAccountId
-                    ? ("My-customized-prefix" + account.homeAccountId).substr(0, 64)
-                    : (Math.random().toString() + Date.now().toString()).substr(0, 64);
+                // Compose userId safely
+                const userId = account.homeAccountId
+                    ? ("My-customized-prefix" + account.homeAccountId).substring(0, 64)
+                    : (Math.random().toString() + Date.now().toString()).substring(0, 64);
 
-                const { token } = await fetchJSON(theURL);
+                // Get DirectLine token from your service
+                const { token } = await fetchJSON(directLineTokenUrl);
+
                 const directLine = window.WebChat.createDirectLine({
                     token,
                     domain: 'https://europe.directline.botframework.com/v3/directline'
                 });
 
-                const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
+                const store = window.WebChat.createStore({}, ({ dispatch }) => next => action => {
                     if (action.type === 'DIRECT_LINE/CONNECT_FULFILLED') {
                         dispatch({
                             type: 'WEB_CHAT/SEND_EVENT',
                             payload: {
                                 name: 'startConversation',
                                 type: 'event',
-                                value: { text: account?.name || "Guest" }
+                                value: { text: account.name }
                             }
                         });
-                    }
-
-                    if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
-                        const activity = action.payload.activity;
-                        const resourceUri = getOAuthCardResourceUri(activity);
-
-                        if (activity.from?.role === 'bot' && resourceUri) {
-                            exchangeTokenAsync(resourceUri).then(token => {
-                                if (token) {
-                                    directLine.postActivity({
-                                        type: 'invoke',
-                                        name: 'signin/tokenExchange',
-                                        value: {
-                                            id: activity.attachments[0].content.tokenExchangeResource.id,
-                                            connectionName: activity.attachments[0].content.connectionName,
-                                            token
-                                        },
-                                        from: {
-                                            id: userId,
-                                            name: account?.name || "Guest",
-                                            role: "user"
-                                        }
-                                    }).subscribe(
-                                        id => id === 'retry' && next(action),
-                                        error => next(action)
-                                    );
-                                    return;
-                                }
-                                return next(action);
-                            });
-                            return;
-                        }
                     }
                     return next(action);
                 });
@@ -275,17 +228,29 @@
                     backgroundColor: 'transparent'
                 };
 
-                window.WebChat.renderWebChat({
-                    directLine,
-                    store,
-                    userID: userId,
-                    styleOptions
-                }, document.getElementById('webchat'));
-
-            } catch (err) {
-                console.error("Bot initialization failed:", err);
+                window.WebChat.renderWebChat(
+                    {
+                        directLine,
+                        store,
+                        userID: userId,
+                        styleOptions
+                    },
+                    webchatDiv
+                );
+            } catch (error) {
+                console.error("Error initializing bot:", error);
+                alert('Failed to initialize bot. See console for details.');
             }
         }
+
+        // Video replay logic to force replay when ended
+        document.addEventListener("DOMContentLoaded", function () {
+            const video = document.getElementById("backgroundVideo");
+            video.addEventListener("ended", () => {
+                video.currentTime = 0;
+                video.play().catch(e => console.error('Video replay error:', e));
+            });
+        });
     </script>
 </body>
 
