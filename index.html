@@ -2,14 +2,16 @@
 <html>
 
 <head>
-    <title>Web Chat</title>
+    <title>CPS Web Chat</title>
     <script crossorigin="anonymous" src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Using MSAL.js v2.x -->
     <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
     <script src="https://unpkg.com/@azure/storage-blob@10.3.0/browser/azure-storage.blob.min.js"
         integrity="sha384-fsfhtLyVQo3L3Bh73qgQoRR328xEeXnRGdoi53kjo1uectCfAHFfavrBBN2Nkbdf"
         crossorigin="anonymous"></script>
+    <script type="text/javascript">
+        if (typeof msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/browser/2.32.0/js/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
+    </script>
 
     <!-- Favicon -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -107,6 +109,9 @@
 </head>
 
 <body>
+    <!-- Logo -->
+    <!-- <img src="getsitelogob.png" alt="Isuzu Logo" class="logo"> -->
+
     <!-- Video Background -->
     <video id="backgroundVideo" autoplay muted loop class="background-video">
         <source src="Isuzu MU-X Showcase  Isuzu UTE Australia - Isuzu UTE Australia (720p, h264).mp4" type="video/mp4">
@@ -133,12 +138,11 @@
             auth: {
                 clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
                 authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850',
-                redirectUri: window.location.origin,
-                navigateToLoginRequestUrl: false
+                redirectUri: window.location.origin
             },
             cache: {
-                cacheLocation: "sessionStorage", // Better for private browsing
-                storeAuthStateInCookie: true // Required for Safari/IE
+                cacheLocation: "sessionStorage",
+                storeAuthStateInCookie: true
             },
             system: {
                 loggerOptions: {
@@ -147,20 +151,14 @@
                         console.log(message);
                     },
                     logLevel: msal.LogLevel.Verbose
-                },
-                windowHashTimeout: 9000,
-                iframeHashTimeout: 9000,
-                loadFrameTimeout: 9000
+                }
             }
         };
 
         // Initialize MSAL PublicClientApplication
         const msalInstance = new msal.PublicClientApplication(msalConfig);
 
-        // Account and login state management
-        let accountId = null;
-
-        // Check if we're returning from a redirect
+        // Handle redirect response
         msalInstance.handleRedirectPromise()
             .then(handleResponse)
             .catch(error => {
@@ -175,14 +173,6 @@
                 video.play().catch(console.error);
             });
 
-            // Check for active account
-            const accounts = msalInstance.getAllAccounts();
-            if (accounts.length > 0) {
-                accountId = accounts[0].homeAccountId;
-                updateUI(accounts[0]);
-                initializeBot();
-            }
-
             // Set up login button
             document.getElementById("login").addEventListener("click", function () {
                 const accounts = msalInstance.getAllAccounts();
@@ -192,34 +182,28 @@
                         postLogoutRedirectUri: window.location.origin
                     });
                 } else {
-                    // Login
-                    if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                        // Use redirect flow for mobile devices
-                        msalInstance.loginRedirect({
-                            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"],
-                            prompt: "select_account"
-                        });
-                    } else {
-                        // Use popup for desktop
-                        msalInstance.loginPopup({
-                            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"],
-                            prompt: "select_account"
-                        }).then(handleResponse)
-                            .catch(console.error);
-                    }
+                    // Login - using redirect for better mobile compatibility
+                    msalInstance.loginRedirect({
+                        scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
+                    });
                 }
             });
+
+            // Check for active account
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+                updateUI(accounts[0]);
+                initializeBot();
+            }
         });
 
         function handleResponse(response) {
             if (response !== null) {
-                accountId = response.account.homeAccountId;
                 updateUI(response.account);
                 initializeBot();
             } else {
                 const accounts = msalInstance.getAllAccounts();
                 if (accounts.length > 0) {
-                    accountId = accounts[0].homeAccountId;
                     updateUI(accounts[0]);
                     initializeBot();
                 }
@@ -228,7 +212,7 @@
 
         function updateUI(account) {
             if (account) {
-                document.getElementById("userName").innerHTML = `Currently logged in as ${account.name}`;
+                document.getElementById("userName").innerHTML = "Currently logged in as " + account.name;
                 document.getElementById("login").innerHTML = "Log Out";
             } else {
                 document.getElementById("userName").innerHTML = "Not logged in";
@@ -247,11 +231,11 @@
         }
 
         function exchangeTokenAsync(resourceUri) {
-            const account = msalInstance.getAccountByHomeId(accountId);
-            if (account) {
+            const accounts = msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
                 return msalInstance.acquireTokenSilent({
                     scopes: [resourceUri],
-                    account: account
+                    account: accounts[0]
                 })
                     .then(function (tokenResponse) {
                         return tokenResponse.accessToken;
@@ -287,7 +271,9 @@
                 webchatElement.innerHTML = '';
 
                 var theURL = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
-                var account = msalInstance.getAccountByHomeId(accountId);
+                const accounts = msalInstance.getAllAccounts();
+                const account = accounts.length > 0 ? accounts[0] : null;
+
                 var userId = account?.homeAccountId != null
                     ? ("My-customized-prefix" + account.homeAccountId).substr(0, 64)
                     : (Math.random().toString() + Date.now().toString()).substr(0, 64);
@@ -306,7 +292,7 @@
                             payload: {
                                 name: 'startConversation',
                                 type: 'event',
-                                value: { text: account.name }
+                                value: { text: account?.name || "Guest" }
                             }
                         });
                         return next(action);
@@ -328,7 +314,7 @@
                                         },
                                         "from": {
                                             id: userId,
-                                            name: account.name,
+                                            name: account?.name || "Guest",
                                             role: "user"
                                         }
                                     }).subscribe(
