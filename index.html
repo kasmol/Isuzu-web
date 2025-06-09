@@ -1,172 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <title>Copilot Studio Web Chat with SSO</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copilot Studio Web Chat with SSO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Load Web Chat + MSAL -->
-    <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
-    <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
+  <!-- Load Web Chat + MSAL -->
+  <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+  <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
 
-    <!-- Minimal styling -->
-    <style>
-        html,
-        body {
-            margin: 0;
-            height: 100%;
-            font-family: "Segoe UI", sans-serif;
-        }
+  <!-- Minimal styling -->
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: "Segoe UI", sans-serif;
+    }
 
-        #webchat {
-            height: 100%;
-            width: 100%;
-        }
-    </style>
+    #webchat {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
 </head>
 
 <body>
-    <div id="webchat"></div>
+  <div id="webchat"></div>
 
-    <script>
-        // Your specific config
-        const clientId = "53a49c6e-cf24-4e29-87f2-55e2f8060b2c";
-        const tenantId = "dfa6c3f8-0b32-4a16-bf66-de2295df0850";
-        const tokenEndpoint = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
+  <script>
+    // Your specific config
+    const clientId = "53a49c6e-cf24-4e29-87f2-55e2f8060b2c";
+    const tenantId = "dfa6c3f8-0b32-4a16-bf66-de2295df0850";
+    const tokenEndpoint = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
 
-        const msalConfig = {
-            auth: {
-                clientId,
-                authority: `https://login.microsoftonline.com/${tenantId}`
-            },
-            cache: {
-                cacheLocation: "sessionStorage",
-                storeAuthStateInCookie: false
+    const msalConfig = {
+      auth: {
+        clientId,
+        authority: `https://login.microsoftonline.com/${tenantId}`
+      },
+      cache: {
+        cacheLocation: "sessionStorage",
+        storeAuthStateInCookie: false
+      }
+    };
+
+    const loginRequest = {
+      scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
+    };
+
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+    let user = null;
+
+    const getOAuthCardResourceUri = activity => {
+      return activity?.attachments?.[0]?.contentType === 'application/vnd.microsoft.card.oauth'
+        ? activity.attachments[0].content.tokenExchangeResource?.uri
+        : null;
+    };
+
+    const exchangeTokenAsync = async resourceUri => {
+      const accounts = msalInstance.getAllAccounts();
+      if (!accounts.length) return null;
+
+      try {
+        const tokenResponse = await msalInstance.acquireTokenSilent({ scopes: [resourceUri] });
+        return tokenResponse.accessToken;
+      } catch (e) {
+        console.error("Silent token acquire failed:", e);
+        return null;
+      }
+    };
+
+    const fetchJSON = async (url, options = {}) => {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          Accept: 'application/json'
+        }
+      });
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+      return await res.json();
+    };
+
+    const renderChat = async () => {
+      const userID = user?.localAccountId?.substr(0, 36) || Math.random().toString(36).substr(2, 32);
+      const { token } = await fetchJSON(tokenEndpoint);
+      const directLine = WebChat.createDirectLine({ token });
+
+      const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
+        const { type } = action;
+
+        if (type === 'DIRECT_LINE/CONNECT_FULFILLED') {
+          dispatch({
+            type: 'DIRECT_LINE/POST_ACTIVITY',
+            meta: { method: 'keyboard' },
+            payload: {
+              activity: {
+                type: 'event',
+                name: 'startConversation',
+                channelData: { postBack: true }
+              }
             }
-        };
+          });
+        }
 
-        const loginRequest = {
-            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
-        };
-
-        const msalInstance = new msal.PublicClientApplication(msalConfig);
-        let user = null;
-
-        const getOAuthCardResourceUri = activity => {
-            return activity?.attachments?.[0]?.contentType === 'application/vnd.microsoft.card.oauth'
-                ? activity.attachments[0].content.tokenExchangeResource?.uri
-                : null;
-        };
-
-        const exchangeTokenAsync = async resourceUri => {
-            const accounts = msalInstance.getAllAccounts();
-            if (!accounts.length) return null;
-
-            try {
-                const tokenResponse = await msalInstance.acquireTokenSilent({ scopes: [resourceUri] });
-                return tokenResponse.accessToken;
-            } catch (e) {
-                console.error("Silent token acquire failed:", e);
-                return null;
-            }
-        };
-
-        const fetchJSON = async (url, options = {}) => {
-            const res = await fetch(url, {
-                ...options,
-                headers: {
-                    ...options.headers,
-                    Accept: 'application/json'
-                }
-            });
-            if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-            return await res.json();
-        };
-
-        const renderChat = async () => {
-            const userID = user?.localAccountId?.substr(0, 36) || Math.random().toString(36).substr(2, 32);
-            const { token } = await fetchJSON(tokenEndpoint);
-            const directLine = WebChat.createDirectLine({ token });
-
-            const store = WebChat.createStore({}, ({ dispatch }) => next => action => {
-                const { type } = action;
-
-                if (type === 'DIRECT_LINE/CONNECT_FULFILLED') {
-                    dispatch({
-                        type: 'DIRECT_LINE/POST_ACTIVITY',
-                        meta: { method: 'keyboard' },
-                        payload: {
-                            activity: {
-                                type: 'event',
-                                name: 'startConversation',
-                                channelData: { postBack: true }
-                            }
-                        }
-                    });
-                }
-
-                if (type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
-                    const resourceUri = getOAuthCardResourceUri(action.payload.activity);
-                    if (resourceUri) {
-                        exchangeTokenAsync(resourceUri).then(token => {
-                            if (token) {
-                                directLine.postActivity({
-                                    type: 'invoke',
-                                    name: 'signin/tokenExchange',
-                                    value: {
-                                        id: action.payload.activity.attachments[0].content.tokenExchangeResource.id,
-                                        connectionName: action.payload.activity.attachments[0].content.connectionName,
-                                        token
-                                    },
-                                    from: { id: userID, name: user?.name || "User", role: "user" }
-                                }).subscribe(id => {
-                                    if (id === 'retry') return next(action);
-                                }, () => next(action));
-                            } else {
-                                return next(action);
-                            }
-                        });
-                        return;
-                    }
-                }
-
+        if (type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
+          const resourceUri = getOAuthCardResourceUri(action.payload.activity);
+          if (resourceUri) {
+            exchangeTokenAsync(resourceUri).then(token => {
+              if (token) {
+                directLine.postActivity({
+                  type: 'invoke',
+                  name: 'signin/tokenExchange',
+                  value: {
+                    id: action.payload.activity.attachments[0].content.tokenExchangeResource.id,
+                    connectionName: action.payload.activity.attachments[0].content.connectionName,
+                    token
+                  },
+                  from: { id: userID, name: user?.name || "User", role: "user" }
+                }).subscribe(id => {
+                  if (id === 'retry') return next(action);
+                }, () => next(action));
+              } else {
                 return next(action);
+              }
             });
+            return;
+          }
+        }
 
-            const styleOptions = {
-                hideUploadButton: true,
-                botAvatarImage: 'https://bot-framework.azureedge.net/bot-icons-v1/6ab9b101-b65c-4357-9e9f-915cbf313a14_2K5Bt02aW8egEb97fxAgh7vqChK4UV3Nh3Lw3YYArhEKR8mB.png',
-                userAvatarImage: 'https://content.powerapps.com/resource/makerx/static/media/user.0d06c38a.svg',
-                botAvatarInitials: 'Bot',
-                userAvatarInitials: 'You'
-            };
+        return next(action);
+      });
 
-            WebChat.renderWebChat({
-                directLine,
-                store,
-                userID,
-                styleOptions
-            }, document.getElementById('webchat'));
-        };
+      const styleOptions = {
+        hideUploadButton: true,
+        botAvatarImage: 'https://bot-framework.azureedge.net/bot-icons-v1/6ab9b101-b65c-4357-9e9f-915cbf313a14_2K5Bt02aW8egEb97fxAgh7vqChK4UV3Nh3Lw3YYArhEKR8mB.png',
+        userAvatarImage: 'https://content.powerapps.com/resource/makerx/static/media/user.0d06c38a.svg',
+        botAvatarInitials: 'Bot',
+        userAvatarInitials: 'You'
+      };
 
-        (async () => {
-            try {
-                const accounts = msalInstance.getAllAccounts();
-                if (accounts.length > 0) {
-                    msalInstance.setActiveAccount(accounts[0]);
-                    user = accounts[0];
-                } else {
-                    const login = await msalInstance.loginPopup(loginRequest);
-                    msalInstance.setActiveAccount(login.account);
-                    user = login.account;
-                }
+      WebChat.renderWebChat({
+        directLine,
+        store,
+        userID,
+        styleOptions
+      }, document.getElementById('webchat'));
+    };
 
-                await renderChat();
-            } catch (e) {
-                console.error("Login/render failed:", e);
-            }
-        })();
-    </script>
+    (async () => {
+      try {
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          msalInstance.setActiveAccount(accounts[0]);
+          user = accounts[0];
+        } else {
+          const login = await msalInstance.loginPopup(loginRequest);
+          msalInstance.setActiveAccount(login.account);
+          user = login.account;
+        }
+
+        await renderChat();
+      } catch (e) {
+        console.error("Login/render failed:", e);
+      }
+    })();
+  </script>
 </body>
-
 </html>
