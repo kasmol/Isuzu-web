@@ -10,10 +10,7 @@
     <script crossorigin src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
 
     <!-- MSAL.js v2 -->
-     <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
-    <!-- <script type="text/javascript">
-        if (typeof msal === 'undefined') document.write(unescape("%3Cscript src='https://alcdn.msftauth.net/browser/2.32.0/js/msal-browser.min.js' type='text/javascript' %3E%3C/script%3E"));
-    </script> -->
+    <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
     <script>
         if (typeof msal === 'undefined') {
             document.write('<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.32.0/dist/msal-browser.min.js"><\/script>');
@@ -99,6 +96,11 @@
             border-radius: 3px;
             cursor: pointer;
         }
+
+        #login.loading {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -125,17 +127,21 @@
     </div>
 
     <script>
-        // Confirm msal loaded
-        console.log('msal library:', msal);
-        if (!msal) {
-            alert('MSAL library did not load correctly!');
+        // Verify MSAL loaded
+        if (typeof msal === 'undefined') {
+            alert('MSAL library failed to load. Please check console for errors.');
+            console.error('MSAL library not loaded');
+        } else {
+            console.log('MSAL version:', msal.version);
         }
 
-        // MSAL config for v2
+        // MSAL configuration for SPA
         const msalConfig = {
             auth: {
                 clientId: '53a49c6e-cf24-4e29-87f2-55e2f8060b2c',
-                authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850'
+                authority: 'https://login.microsoftonline.com/dfa6c3f8-0b32-4a16-bf66-de2295df0850',
+                redirectUri: window.location.origin,
+                postLogoutRedirectUri: window.location.origin
             },
             cache: {
                 cacheLocation: 'localStorage',
@@ -145,39 +151,66 @@
 
         const msalInstance = new msal.PublicClientApplication(msalConfig);
 
+        // DOM elements
         const loginButton = document.getElementById('login');
         const userNameLabel = document.getElementById('userName');
         const webchatDiv = document.getElementById('webchat');
 
+        // Handle redirect response
+        msalInstance.handleRedirectPromise()
+            .then((response) => {
+                if (response) {
+                    handleLoginSuccess(response.account);
+                }
+            })
+            .catch(error => {
+                console.error("Redirect error:", error);
+                showError(`Authentication error: ${error.message}`);
+            });
+
+        // Login button handler
         loginButton.addEventListener('click', async () => {
             try {
-                const loginResponse = await msalInstance.loginPopup({
-                    scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
-                });
+                loginButton.disabled = true;
+                loginButton.classList.add('loading');
+                loginButton.textContent = 'Logging in...';
 
-                // Get user info
-                const account = msalInstance.getAllAccounts()[0];
-                if (account) {
-                    userNameLabel.textContent = `Currently logged in as ${account.name}`;
-                    loginButton.style.display = 'none';
-                    initializeBot(account);
-                }
+                await msalInstance.loginRedirect({
+                    scopes: ["User.Read"],
+                    redirectUri: window.location.origin
+                });
             } catch (error) {
-                console.error(error);
-                alert('Login failed. See console for details.');
+                console.error("Login error:", error);
+                showError(`Login failed: ${error.message}`);
+                resetLoginButton();
             }
         });
 
-        // On page load, check if user is already logged in
+        // Check for existing login on page load
         window.onload = () => {
             const accounts = msalInstance.getAllAccounts();
             if (accounts.length > 0) {
-                const account = accounts[0];
-                userNameLabel.textContent = `Currently logged in as ${account.name}`;
-                loginButton.style.display = 'none';
-                initializeBot(account);
+                handleLoginSuccess(accounts[0]);
             }
         };
+
+        // Helper functions
+        function handleLoginSuccess(account) {
+            userNameLabel.textContent = `Logged in as ${account.name}`;
+            loginButton.style.display = 'none';
+            initializeBot(account);
+        }
+
+        function showError(message) {
+            alert(message);
+            console.error(message);
+        }
+
+        function resetLoginButton() {
+            loginButton.disabled = false;
+            loginButton.classList.remove('loading');
+            loginButton.textContent = 'Log In';
+        }
 
         async function fetchJSON(url, options = {}) {
             const res = await fetch(url, {
@@ -199,15 +232,15 @@
             try {
                 webchatDiv.innerHTML = ''; // clear previous chat
 
-                // Your token endpoint URL to get DirectLine token
+                // DirectLine token endpoint
                 const directLineTokenUrl = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview";
 
-                // Compose userId safely
+                // Generate user ID
                 const userId = account.homeAccountId
                     ? ("My-customized-prefix" + account.homeAccountId).substring(0, 64)
                     : (Math.random().toString() + Date.now().toString()).substring(0, 64);
 
-                // Get DirectLine token from your service
+                // Get DirectLine token
                 const { token } = await fetchJSON(directLineTokenUrl);
 
                 const directLine = window.WebChat.createDirectLine({
@@ -247,11 +280,11 @@
                 );
             } catch (error) {
                 console.error("Error initializing bot:", error);
-                alert('Failed to initialize bot. See console for details.');
+                showError('Failed to initialize bot. See console for details.');
             }
         }
 
-        // Video replay logic to force replay when ended
+        // Video replay logic
         document.addEventListener("DOMContentLoaded", function () {
             const video = document.getElementById("backgroundVideo");
             video.addEventListener("ended", () => {
