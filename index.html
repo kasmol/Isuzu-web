@@ -122,7 +122,7 @@
             Ask Dr.Fred
         </div>
         <div id="subheader">
-            <span id="loginStatus">You are not logged in on the website.</span>
+            <span id="loginStatus">You are not logged in on the chatbot.</span>
             <a id="login" href="#" onclick="onSignInClick()">Log in</a>
             <a id="logout" href="#" onclick="onSignOutClick()">Log out</a>
         </div>
@@ -273,7 +273,12 @@
                 (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
             const { token } = await fetchJSON(tokenEndpoint);
-            const directLine = window.WebChat.createDirectLine({ token });
+            // const directLine = window.WebChat.createDirectLine({ token });
+            const directLine = window.WebChat.createDirectLine({
+                token,
+                domain: 'https://europe.directline.botframework.com/v3/directline'
+            });
+
 
             const store = WebChat.createStore(
                 {},
