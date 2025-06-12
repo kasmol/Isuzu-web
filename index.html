@@ -134,7 +134,7 @@
         // See documentation (https://learn.microsoft.com/en-us/microsoft-copilot-studio/configure-sso?tabs=webApp)
         const clientId = "53a49c6e-cf24-4e29-87f2-55e2f8060b2c"
         const tenantId = "dfa6c3f8-0b32-4a16-bf66-de2295df0850"
-        const tokenEndpoint = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/copilotstudio/dataverse-backed/authenticated/bots/cre7b_agent88/conversations?api-version=2022-03-01-preview" // you can find the token URL via the Mobile app channel configuration
+        const tokenEndpoint = "https://defaultdfa6c3f80b324a16bf66de2295df08.50.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cre7b_agent88/directline/token?api-version=2022-03-01-preview" // you can find the token URL via the Mobile app channel configuration
 
         // Config object to be passed to Msal on creation
         const msalConfig = {
@@ -150,7 +150,7 @@
 
         // Add here scopes for id token to be used at MS Identity Platform endpoints.
         const loginRequest = {
-            scopes: ["User.Read", "openid", "profile"]
+            scopes: ["User.Read", "openid", "profile", "Sites.Read.All", "Files.Read.All"]
         };
 
         const msalInstance = new msal.PublicClientApplication(msalConfig);
