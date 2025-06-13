@@ -312,54 +312,54 @@
 
                     // Filter incoming activities from Direct Line to intercept the Login Card
                     // If we are logged in and have a valid auth token, we will directly pass this in the background to the bot.
-                    // if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
-                    //     const activity = action.payload.activity;
-                    //     let resourceUri;
+                    if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
+                        const activity = action.payload.activity;
+                        let resourceUri;
 
-                    //     if (activity.from && activity.from.role === 'bot' && (resourceUri = getOAuthCardResourceUri(activity))) {
+                        if (activity.from && activity.from.role === 'bot' && (resourceUri = getOAuthCardResourceUri(activity))) {
 
-                    //         exchangeTokenAsync(resourceUri).then((token) => {
-                    //             if (token) {
-                    //                 directLine.postActivity({
-                    //                     type: 'invoke',
-                    //                     name: 'signin/tokenExchange',
-                    //                     value: {
-                    //                         id: activity.attachments[0].content.tokenExchangeResource.id,
-                    //                         connectionName: activity.attachments[0].content.connectionName,
-                    //                         token
-                    //                     },
-                    //                     "from": {
-                    //                         id: userID,
-                    //                         name: user.name,
-                    //                         role: "user"
-                    //                     }
-                    //                 }).subscribe(
-                    //                     id => {
-                    //                         if (id === 'retry') {
-                    //                             // Bot was not able to handle the invoke, so display the oauthCard
-                    //                             return next(action);
-                    //                         }
-                    //                         // Tokenexchange successful and we do not display the oauthCard
-                    //                     },
-                    //                     error => {
-                    //                         // An error occurred to display the oauthCard
-                    //                         return next(action);
-                    //                     }
-                    //                 );
-                    //                 return;
-                    //             }
-                    //             else {
-                    //                 return next(action);
-                    //             }
-                    //         });
-                    //     }
-                    //     else {
-                    //         return next(action);
-                    //     }
-                    // }
-                    // else {
-                    //     return next(action);
-                    // }
+                            exchangeTokenAsync(resourceUri).then((token) => {
+                                if (token) {
+                                    directLine.postActivity({
+                                        type: 'invoke',
+                                        name: 'signin/tokenExchange',
+                                        value: {
+                                            id: activity.attachments[0].content.tokenExchangeResource.id,
+                                            connectionName: activity.attachments[0].content.connectionName,
+                                            token
+                                        },
+                                        "from": {
+                                            id: userID,
+                                            name: user.name,
+                                            role: "user"
+                                        }
+                                    }).subscribe(
+                                        id => {
+                                            if (id === 'retry') {
+                                                // Bot was not able to handle the invoke, so display the oauthCard
+                                                return next(action);
+                                            }
+                                            // Tokenexchange successful and we do not display the oauthCard
+                                        },
+                                        error => {
+                                            // An error occurred to display the oauthCard
+                                            return next(action);
+                                        }
+                                    );
+                                    return;
+                                }
+                                else {
+                                    return next(action);
+                                }
+                            });
+                        }
+                        else {
+                            return next(action);
+                        }
+                    }
+                    else {
+                        return next(action);
+                    }
                 });
 
             const styleOptions = {
