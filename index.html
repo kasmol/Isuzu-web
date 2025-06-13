@@ -271,9 +271,6 @@
         async function renderChatWidget() {
 
         
-            // var userId = clientApplication.account?.accountIdentifier != null ? 
-            //     ("My-custom-prefix" + clientApplication.account.accountIdentifier).substr(0, 64) 
-            //     : (Math.random().toString() + Date.now().toString()).substr(0,64);
             var userID = user?.localAccountId != null ?
                 ("customprefix-" + user.localAccountId).substr(0, 64) :
                 ("customprefix-" + Math.random().toString() + Date.now().toString()).substr(0, 64);
@@ -370,7 +367,7 @@
                 hideUploadButton: true,
                 hideSignInButton: true,
                 hideHeader:true,
-                botAvatarImage: 'https://tse1.mm.bing.net/th?id=OIP.ax6SY6sAm9qTHp4ds6VkawAAAA&pid=Api&P=0&h=220',
+                botAvatarImage: 'https://bot-framework.azureedge.net/bot-icons-v1/6ab9b101-b65c-4357-9e9f-915cbf313a14_2K5Bt02aW8egEb97fxAgh7vqChK4UV3Nh3Lw3YYArhEKR8mB.png',
                 botAvatarInitials: 'Bot',
                 userAvatarImage: 'https://content.powerapps.com/resource/makerx/static/media/user.0d06c38a.svg',
                 userAvatarInitials: 'User'
