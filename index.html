@@ -274,13 +274,10 @@
             var userID = user?.localAccountId != null ?
                 ("customprefix-" + user.localAccountId).substr(0, 64) :
                 ("customprefix-" + Math.random().toString() + Date.now().toString()).substr(0, 64);
-            // var userID = user?.localAccountId != null ?
-                // (user.localAccountId).substr(0, 36) :
-                // (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
 
             const { token } = await fetchJSON(tokenEndpoint);
-            // const directLine = window.WebChat.createDirectLine({ token });
+            // const directLine = window.WebChat.createDirectLine({ token }); 
             const directLine = window.WebChat.createDirectLine({
                 token,
                 domain: 'https://europe.directline.botframework.com/v3/directline'
@@ -368,6 +365,7 @@
             const styleOptions = {
                 // Add styleOptions to customize Web Chat canvas
                 hideUploadButton: true,
+                hideSignInButton: true,
                 botAvatarImage: 'https://bot-framework.azureedge.net/bot-icons-v1/6ab9b101-b65c-4357-9e9f-915cbf313a14_2K5Bt02aW8egEb97fxAgh7vqChK4UV3Nh3Lw3YYArhEKR8mB.png',
                 botAvatarInitials: 'Bot',
                 userAvatarImage: 'https://content.powerapps.com/resource/makerx/static/media/user.0d06c38a.svg',
