@@ -269,42 +269,62 @@
 
     <script>
         async function renderChatWidget() {
-
-        
-            var userId = clientApplication.account?.accountIdentifier != null ? 
-                ("My-custom-prefix" + clientApplication.account.accountIdentifier).substr(0, 64) 
-                : (Math.random().toString() + Date.now().toString()).substr(0,64);
-            // var userID = user?.localAccountId != null ?
-            //     ("customprefix-" + user.localAccountId).substr(0, 64) :
-            //     ("customprefix-" + Math.random().toString() + Date.now().toString()).substr(0, 64);
-
+            var userID = user?.localAccountId != null ?
+                ("customprefix-" + user.localAccountId).substr(0, 64) :
+                ("customprefix-" + Math.random().toString() + Date.now().toString()).substr(0, 64);
 
             const { token } = await fetchJSON(tokenEndpoint);
-            // const directLine = window.WebChat.createDirectLine({ token }); 
             const directLine = window.WebChat.createDirectLine({
                 token,
                 domain: 'https://europe.directline.botframework.com/v3/directline'
             });
 
-
             const store = WebChat.createStore(
                 {},
-                ({ dispatch }) => next => action => {
+                ({ dispatch }) => next => async action => {
                     const { type } = action;
 
                     // Configure your bot to start the conversation automatically
-                    // See https://learn.microsoft.com/en-us/microsoft-copilot-studio/configure-bot-greeting?tabs=web
                     if (action.type === "DIRECT_LINE/CONNECT_FULFILLED") {
+                        // If user is already logged in, attempt preemptive authentication
+                        if (user) {
+                            try {
+                                // Replace with your actual resource URI from bot configuration
+                                const resourceUri = "api://your-bot-resource-uri";
+                                const accessToken = await exchangeTokenAsync(resourceUri);
+
+                                if (accessToken) {
+                                    dispatch({
+                                        type: "DIRECT_LINE/POST_ACTIVITY",
+                                        payload: {
+                                            activity: {
+                                                type: 'invoke',
+                                                name: 'signin/tokenExchange',
+                                                value: {
+                                                    id: "preemptive-auth-" + Date.now(),
+                                                    connectionName: "your-connection-name", // Replace with your actual connection name
+                                                    token: accessToken
+                                                },
+                                                from: {
+                                                    id: userID,
+                                                    name: user.name,
+                                                    role: "user"
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                            } catch (error) {
+                                console.error("Preemptive auth failed:", error);
+                            }
+                        }
+
+                        // Start conversation
                         dispatch({
-                            meta: {
-                                method: "keyboard",
-                            },
+                            meta: { method: "keyboard" },
                             payload: {
                                 activity: {
-                                    channelData: {
-                                        postBack: true,
-                                    },
-                                    // Web Chat will show the 'Greeting' System Topic message which has a trigger-phrase 'hello'
+                                    channelData: { postBack: true },
                                     name: 'startConversation',
                                     type: "event"
                                 },
@@ -314,14 +334,14 @@
                     }
 
                     // Filter incoming activities from Direct Line to intercept the Login Card
-                    // If we are logged in and have a valid auth token, we will directly pass this in the background to the bot.
                     if (action.type === 'DIRECT_LINE/INCOMING_ACTIVITY') {
                         const activity = action.payload.activity;
                         let resourceUri;
 
                         if (activity.from && activity.from.role === 'bot' && (resourceUri = getOAuthCardResourceUri(activity))) {
-
-                            exchangeTokenAsync(resourceUri).then((token) => {
+                            // If we have a user, try to exchange token automatically
+                            if (user) {
+                                const token = await exchangeTokenAsync(resourceUri);
                                 if (token) {
                                     directLine.postActivity({
                                         type: 'invoke',
@@ -339,37 +359,29 @@
                                     }).subscribe(
                                         id => {
                                             if (id === 'retry') {
-                                                // Bot was not able to handle the invoke, so display the oauthCard
                                                 return next(action);
                                             }
-                                            // Tokenexchange successful and we do not display the oauthCard
                                         },
                                         error => {
-                                            // An error occurred to display the oauthCard
                                             return next(action);
                                         }
                                     );
                                     return;
                                 }
-                                else {
-                                    return next(action);
-                                }
-                            });
-                        }
-                        else {
-                            return next(action);
+                            }
+                            // Skip showing the login card completely
+                            return;
                         }
                     }
-                    else {
-                        return next(action);
-                    }
-                });
+
+                    return next(action);
+                }
+            );
 
             const styleOptions = {
-                // Add styleOptions to customize Web Chat canvas 4xebrWI1
                 hideUploadButton: true,
                 hideSignInButton: true,
-                hideHeader:true,
+                hideHeader: true,
                 botAvatarImage: 'https://tse1.mm.bing.net/th?id=OIP.ax6SY6sAm9qTHp4ds6VkawAAAA&pid=Api&P=0&h=220',
                 botAvatarInitials: 'Bot',
                 userAvatarImage: 'https://content.powerapps.com/resource/makerx/static/media/user.0d06c38a.svg',
@@ -391,7 +403,6 @@
         (async () => {
             await renderChatWidget()
         })()
-
     </script>
 </body>
 
