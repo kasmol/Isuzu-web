@@ -77,7 +77,8 @@
             font-size: 12px;
         }
 
-        #login, #logout {
+        #login,
+        #logout {
             background-color: #4caf50;
             color: white;
             border: none;
@@ -112,7 +113,8 @@
 <body>
     <!-- Video Background -->
     <video id="backgroundVideo" autoplay muted loop class="background-video" playsinline>
-        <source src="Isuzu MU-X Showcase  Isuzu UTE Australia - Isuzu UTE Australia (720p, h264).mp4" type="video/mp4" />
+        <source src="Isuzu MU-X Showcase  Isuzu UTE Australia - Isuzu UTE Australia (720p, h264).mp4"
+            type="video/mp4" />
         Your browser does not support the video tag.
     </video>
 
@@ -268,11 +270,14 @@
     <script>
         async function renderChatWidget() {
 
-            var userID = user?.localAccountId != null ?
-                (user.localAccountId).substr(0, 36) :
-                (Math.random().toString() + Date.now().toString()).substr(0, 64);
+            var userId = clientApplication.account?.accountIdentifier != null ?
+                ("My-custom-prefix" + clientApplication.account.accountIdentifier).substr(0, 64)
+                : (Math.random().toString() + Date.now().toString()).substr(0, 64);
+            // var userID = user?.localAccountId != null ?
+            //     (user.localAccountId).substr(0, 36) :
+            //     (Math.random().toString() + Date.now().toString()).substr(0, 64);
 
-            
+
             const { token } = await fetchJSON(tokenEndpoint);
             // const directLine = window.WebChat.createDirectLine({ token });
             const directLine = window.WebChat.createDirectLine({
