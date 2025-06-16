@@ -271,9 +271,12 @@
         async function renderChatWidget() {
 
         
-            var userID = user?.localAccountId != null ?
-                ("customprefix-" + user.localAccountId).substr(0, 64) :
-                ("customprefix-" + Math.random().toString() + Date.now().toString()).substr(0, 64);
+            var userId = clientApplication.account?.accountIdentifier != null ? 
+                ("My-custom-prefix" + clientApplication.account.accountIdentifier).substr(0, 64) 
+                : (Math.random().toString() + Date.now().toString()).substr(0,64);
+            // var userID = user?.localAccountId != null ?
+            //     ("customprefix-" + user.localAccountId).substr(0, 64) :
+            //     ("customprefix-" + Math.random().toString() + Date.now().toString()).substr(0, 64);
 
 
             const { token } = await fetchJSON(tokenEndpoint);
@@ -335,10 +338,10 @@
                                         }
                                     }).subscribe(
                                         id => {
-                                            // if (id === 'retry') {
+                                            if (id === 'retry') {
                                                 // Bot was not able to handle the invoke, so display the oauthCard
-                                                // return next(action);
-                                            // }
+                                                return next(action);
+                                            }
                                             // Tokenexchange successful and we do not display the oauthCard
                                         },
                                         error => {
